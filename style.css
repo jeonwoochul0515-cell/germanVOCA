@@ -1,1 +1,81 @@
-/* Add styles here */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans:wght@400;600;700&display=swap');
+
+body { 
+    font-family: 'Noto Sans', 'Noto Sans KR', sans-serif; 
+    -webkit-tap-highlight-color: transparent; 
+    overflow-x: hidden; 
+}
+
+/* --- Scrollbar Utility --- */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* --- UI 상태 스타일 --- */
+.hide-meaning .meaning-container, 
+.hide-meaning .breakdown { opacity: 0; }
+
+.hide-meaning .meaning-container.revealed, 
+.hide-meaning .breakdown.revealed { opacity: 1; }
+
+/* --- 인터랙션 & 애니메이션 --- */
+.card-touch { 
+    transition: transform 0.1s, opacity 0.3s; 
+    touch-action: pan-y; 
+}
+
+.filter-active { 
+    ring-width: 3px; 
+    --tw-ring-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.05); 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+}
+
+/* --- 스와이프 힌트 --- */
+.swipe-hint { 
+    position: absolute; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    font-size: 2rem; 
+    opacity: 0; 
+    transition: opacity 0.2s; 
+    pointer-events: none; 
+    z-index: 10; 
+}
+.hint-left { right: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
+.hint-right { left: 15px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
+
+/* --- 축하 오버레이 애니메이션 --- */
+#celebration-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 100;
+    display: flex; flex-col; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.5s;
+}
+#celebration-overlay.active { opacity: 1; pointer-events: auto; }
+
+.thumb-up { 
+    font-size: 8rem; 
+    animation: thumbsUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate; 
+}
+@keyframes thumbsUp {
+    0% { transform: scale(1) rotate(-10deg); }
+    100% { transform: scale(1.2) rotate(10deg); }
+}
+
+.confetti { 
+    position: absolute; width: 10px; height: 10px; 
+    background-color: #f00; animation: fall linear forwards; 
+}
+@keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+
+/* 버튼 팝 효과 */
+.btn-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}

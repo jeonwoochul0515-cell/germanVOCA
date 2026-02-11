@@ -1,14 +1,167 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>독일어 단어장 (Pro Clean)</title>
+
+<!-- 모바일 최적화 설정 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/197/197571.png">
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Custom Styles -->
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans:wght@400;600;700&display=swap');
+    
+    body { 
+        font-family: 'Noto Sans', 'Noto Sans KR', sans-serif; 
+        -webkit-tap-highlight-color: transparent; 
+        overflow-x: hidden; 
+    }
+    
+    /* --- UI 상태 스타일 --- */
+    .hide-meaning .meaning-container, 
+    .hide-meaning .breakdown { opacity: 0; }
+    
+    .hide-meaning .meaning-container.revealed, 
+    .hide-meaning .breakdown.revealed { opacity: 1; }
+    
+    /* --- 인터랙션 & 애니메이션 --- */
+    .card-touch { 
+        transition: transform 0.1s; 
+        touch-action: pan-y; 
+    }
+    
+    .filter-active { 
+        ring-width: 3px; 
+        ring-color: white; 
+        transform: scale(1.05); 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2); 
+    }
+
+    /* --- 스와이프 힌트 --- */
+    .swipe-hint { 
+        position: absolute; 
+        top: 50%; 
+        transform: translateY(-50%); 
+        font-size: 2rem; 
+        opacity: 0; 
+        transition: opacity 0.2s; 
+        pointer-events: none; 
+        z-index: 10; 
+    }
+    .hint-left { right: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
+    .hint-right { left: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
+
+    /* --- 축하 오버레이 애니메이션 --- */
+    #celebration-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 100;
+        display: flex; flex-col; justify-content: center; align-items: center;
+        opacity: 0; pointer-events: none; transition: opacity 0.5s;
+    }
+    #celebration-overlay.active { opacity: 1; pointer-events: auto; }
+    
+    .thumb-up { 
+        font-size: 8rem; 
+        animation: thumbsUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate; 
+    }
+    @keyframes thumbsUp {
+        0% { transform: scale(1) rotate(-10deg); }
+        100% { transform: scale(1.2) rotate(10deg); }
+    }
+    
+    .confetti { 
+        position: absolute; width: 10px; height: 10px; 
+        background-color: #f00; animation: fall linear forwards; 
+    }
+    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
+
+    /* 버튼 팝 효과 */
+    .btn-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes popIn {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+</style>
+
+
 </head>
-<body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+<body class="bg-gray-100 min-h-screen pb-20">
+
+<!-- 1. 헤더 및 컨트롤 패널 -->
+<div class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md px-4 py-3">
+    <div class="max-w-4xl mx-auto flex flex-col items-center">
+        <!-- 제목 영역 -->
+        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Coat_of_arms_of_Germany.svg/240px-Coat_of_arms_of_Germany.svg.png" alt="Bundesadler" class="h-6 w-auto object-contain">
+            <span id="level-title">SRS 단어장</span> 
+            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold" id="mode-badge">8:2 학습중</span>
+        </h1>
+        
+        <!-- 버튼 그룹 -->
+        <div class="mt-2 flex gap-2 w-full max-w-md overflow-x-auto pb-1 no-scrollbar">
+            <button onclick="toggleMeanings()" id="toggleBtn" class="flex-1 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[90px]">
+                👁️ 뜻 가리기
+            </button>
+            <button onclick="undoDelete()" id="undoBtn" class="hidden flex-1 bg-yellow-500 active:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition btn-pop whitespace-nowrap min-w-[90px]">
+                ↩️ 되살리기
+            </button>
+            <button onclick="shuffleCurrentList()" class="flex-1 bg-purple-600 active:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[80px]">
+                🔀 섞기
+            </button>
+            <button onclick="resetList()" class="flex-1 bg-gray-600 active:bg-gray-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[80px]">
+                🔄 초기화
+            </button>
+        </div>
+        
+        <!-- 가이드 -->
+        <div class="text-[10px] text-gray-400 mt-2 flex justify-between w-full max-w-sm px-2">
+            <span class="flex items-center">⬅️ 왼쪽: 알아요 (다음 주기)</span>
+            <span class="flex items-center">오른쪽: 몰라요 (오늘 반복) ➡️</span>
+        </div>
+    </div>
+</div>
+
+<!-- 2. 메인 콘텐츠 (필터 & 카드) -->
+<div class="p-4 max-w-4xl mx-auto space-y-6">
+    <!-- 품사 필터 -->
+    <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white mb-4">
+        <button onclick="toggleFilter('Noun')" id="btn-noun" class="bg-blue-500 rounded p-1 shadow hover:bg-blue-600 transition active:scale-95">명사 <span id="count-noun">0</span></button>
+        <button onclick="toggleFilter('Verb')" id="btn-verb" class="bg-red-500 rounded p-1 shadow hover:bg-red-600 transition active:scale-95">동사 <span id="count-verb">0</span></button>
+        <button onclick="toggleFilter('Adjective')" id="btn-adjective" class="bg-green-500 rounded p-1 shadow hover:bg-green-600 transition active:scale-95">형용사 <span id="count-adjective">0</span></button>
+        <button onclick="toggleFilter(null)" id="btn-total" class="bg-gray-500 rounded p-1 shadow hover:bg-gray-600 transition active:scale-95">전체 <span id="count-total">0</span></button>
+    </div>
+
+    <!-- 단어 카드 컨테이너 -->
+    <div id="word-container" class="space-y-3 relative pb-20"></div>
+</div>
+
+<!-- 3. 오버레이 & 오디오 -->
+<div id="celebration-overlay">
+    <div class="text-center text-white">
+        <div class="thumb-up">👍</div>
+        <h2 class="text-4xl font-bold mt-4">학습 완료!</h2>
+        <p class="text-xl mt-2">오늘의 목표를 달성했습니다.</p>
+        <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition">내일 또 만나요!</button>
+    </div>
+</div>
+
+<audio id="applause-sound" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg"></audio>
+
+<!-- 푸터 -->
+<div class="text-center text-gray-400 text-xs pb-8 px-4 fixed bottom-0 w-full bg-gray-100 pt-2 pointer-events-none">
+    <p>Tip: SRS 알고리즘이 적용되어 아는 단어는 나중에,<br>모르는 단어는 즉시 반복됩니다.</p>
+</div>
+
+<!-- 4. 자바스크립트 로직 -->
+<script src="main.js"></script>
+
 </body>
 </html>
