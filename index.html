@@ -14,83 +14,7 @@
 
 <!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Custom Styles -->
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans:wght@400;600;700&display=swap');
-    
-    body { 
-        font-family: 'Noto Sans', 'Noto Sans KR', sans-serif; 
-        -webkit-tap-highlight-color: transparent; 
-        overflow-x: hidden; 
-    }
-    
-    /* --- UI 상태 스타일 --- */
-    .hide-meaning .meaning-container, 
-    .hide-meaning .breakdown { opacity: 0; }
-    
-    .hide-meaning .meaning-container.revealed, 
-    .hide-meaning .breakdown.revealed { opacity: 1; }
-    
-    /* --- 인터랙션 & 애니메이션 --- */
-    .card-touch { 
-        transition: transform 0.1s; 
-        touch-action: pan-y; 
-    }
-    
-    .filter-active { 
-        ring-width: 3px; 
-        ring-color: white; 
-        transform: scale(1.05); 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2); 
-    }
-
-    /* --- 스와이프 힌트 --- */
-    .swipe-hint { 
-        position: absolute; 
-        top: 50%; 
-        transform: translateY(-50%); 
-        font-size: 2rem; 
-        opacity: 0; 
-        transition: opacity 0.2s; 
-        pointer-events: none; 
-        z-index: 10; 
-    }
-    .hint-left { right: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
-    .hint-right { left: 10px; text-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
-
-    /* --- 축하 오버레이 애니메이션 --- */
-    #celebration-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85); z-index: 100;
-        display: flex; flex-col; justify-content: center; align-items: center;
-        opacity: 0; pointer-events: none; transition: opacity 0.5s;
-    }
-    #celebration-overlay.active { opacity: 1; pointer-events: auto; }
-    
-    .thumb-up { 
-        font-size: 8rem; 
-        animation: thumbsUp 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) infinite alternate; 
-    }
-    @keyframes thumbsUp {
-        0% { transform: scale(1) rotate(-10deg); }
-        100% { transform: scale(1.2) rotate(10deg); }
-    }
-    
-    .confetti { 
-        position: absolute; width: 10px; height: 10px; 
-        background-color: #f00; animation: fall linear forwards; 
-    }
-    @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
-
-    /* 버튼 팝 효과 */
-    .btn-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    @keyframes popIn {
-        0% { transform: scale(0.8); opacity: 0; }
-        100% { transform: scale(1); opacity: 1; }
-    }
-</style>
-
+<link rel="stylesheet" href="style.css">
 
 </head>
 <body class="bg-gray-100 min-h-screen pb-20">
@@ -102,7 +26,7 @@
         <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Coat_of_arms_of_Germany.svg/240px-Coat_of_arms_of_Germany.svg.png" alt="Bundesadler" class="h-6 w-auto object-contain">
             <span id="level-title">SRS 단어장</span> 
-            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold" id="mode-badge">8:2 학습중</span>
+            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold" id="mode-badge">100단어 챌린지</span>
         </h1>
         
         <!-- 버튼 그룹 -->
@@ -123,8 +47,8 @@
         
         <!-- 가이드 -->
         <div class="text-[10px] text-gray-400 mt-2 flex justify-between w-full max-w-sm px-2">
-            <span class="flex items-center">⬅️ 왼쪽: 알아요 (다음 주기)</span>
-            <span class="flex items-center">오른쪽: 몰라요 (오늘 반복) ➡️</span>
+            <span class="flex items-center">⬅️ 왼쪽: 알아요 (학습완료)</span>
+            <span class="flex items-center">오른쪽: 몰라요 (나중에 다시) ➡️</span>
         </div>
     </div>
 </div>
@@ -149,7 +73,7 @@
         <div class="thumb-up">👍</div>
         <h2 class="text-4xl font-bold mt-4">학습 완료!</h2>
         <p class="text-xl mt-2">오늘의 목표를 달성했습니다.</p>
-        <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition">내일 또 만나요!</button>
+        <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition">새로운 100개 시작!</button>
     </div>
 </div>
 
@@ -161,6 +85,7 @@
 </div>
 
 <!-- 4. 자바스크립트 로직 -->
+<script src="vocab.js"></script>
 <script src="main.js"></script>
 
 </body>
