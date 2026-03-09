@@ -94,6 +94,7 @@ function switchView(view) {
     if (view === 'home') updateDashboard();
     if (view === 'stats') updateStatsPage();
     if (view === 'learn') renderWords();
+    if (view === 'quiz') exitQuiz();
 }
 
 /* * ==========================================================================
@@ -600,6 +601,271 @@ function closeCelebration() {
 }
 
 /* * ==========================================================================
- * 10. INIT
+ * 10. QUIZ SYSTEM
+ * ========================================================================== */
+const QUIZ_COUNT = 10;
+let quizState = {
+    mode: null,       // 'de2ko' | 'ko2de' | 'listen' | 'artikel'
+    questions: [],
+    currentIndex: 0,
+    correct: 0,
+    wrong: 0,
+    wrongList: [],
+    answered: false
+};
+
+function startQuiz(mode) {
+    quizState.mode = mode;
+    quizState.currentIndex = 0;
+    quizState.correct = 0;
+    quizState.wrong = 0;
+    quizState.wrongList = [];
+    quizState.answered = false;
+
+    // 학습한 단어 우선, 없으면 전체에서
+    let pool = masterVocabList.filter(w => wordStats[w.id]);
+    if (pool.length < 20) pool = [...masterVocabList];
+
+    // 관사 퀴즈는 명사만
+    if (mode === 'artikel') {
+        pool = pool.filter(w => w.partOfSpeech === 'Noun' && w.gender);
+    }
+
+    shuffleArray(pool);
+    quizState.questions = pool.slice(0, QUIZ_COUNT);
+
+    // 문제가 부족하면
+    if (quizState.questions.length < 4) {
+        alert('퀴즈를 진행하기에 단어가 부족합니다. 먼저 학습을 진행해주세요!');
+        return;
+    }
+
+    document.getElementById('quiz-setup').classList.add('hidden');
+    document.getElementById('quiz-result').classList.add('hidden');
+    document.getElementById('quiz-active').classList.remove('hidden');
+
+    const labels = { de2ko: '독일어 → 한국어', ko2de: '한국어 → 독일어', listen: '듣기 퀴즈', artikel: '관사 퀴즈' };
+    setText('quiz-mode-label', labels[mode]);
+
+    showQuizQuestion();
+}
+
+function showQuizQuestion() {
+    const q = quizState.questions[quizState.currentIndex];
+    if (!q) { showQuizResult(); return; }
+
+    quizState.answered = false;
+    const total = quizState.questions.length;
+    const cur = quizState.currentIndex + 1;
+
+    setText('quiz-progress', `${cur}/${total}`);
+    const pBar = document.getElementById('quiz-progress-bar');
+    if (pBar) pBar.style.width = (cur / total * 100) + '%';
+
+    const questionCard = document.getElementById('quiz-question-card');
+    const listenBtn = document.getElementById('quiz-listen-btn');
+    const optionsDiv = document.getElementById('quiz-options');
+
+    listenBtn.classList.add('hidden');
+
+    if (quizState.mode === 'de2ko') {
+        setText('quiz-hint-label', '다음 단어의 뜻은?');
+        const mainWord = q.partOfSpeech === 'Noun' ? `${q.gender} ${q.word}` : q.word;
+        setText('quiz-question-word', mainWord);
+        setText('quiz-question-sub', q.english);
+        renderMultipleChoice(q, 'meaning');
+
+    } else if (quizState.mode === 'ko2de') {
+        setText('quiz-hint-label', '다음 뜻의 독일어 단어는?');
+        setText('quiz-question-word', q.meaning);
+        setText('quiz-question-sub', q.english);
+        renderMultipleChoice(q, 'word');
+
+    } else if (quizState.mode === 'listen') {
+        setText('quiz-hint-label', '들리는 단어를 맞추세요');
+        setText('quiz-question-word', '🎧');
+        setText('quiz-question-sub', '아래 버튼을 눌러 들어보세요');
+        listenBtn.classList.remove('hidden');
+        renderMultipleChoice(q, 'word');
+        // 자동 재생
+        setTimeout(() => quizPlayAudio(), 400);
+
+    } else if (quizState.mode === 'artikel') {
+        setText('quiz-hint-label', '이 명사의 관사는?');
+        setText('quiz-question-word', q.word);
+        setText('quiz-question-sub', q.meaning);
+        renderArtikelOptions(q);
+    }
+}
+
+function renderMultipleChoice(correctItem, answerField) {
+    const optionsDiv = document.getElementById('quiz-options');
+
+    // answerField: 'meaning' = 뜻을 보기로, 'word' = 단어를 보기로
+    let pool = masterVocabList.filter(w => w.id !== correctItem.id && w.partOfSpeech === correctItem.partOfSpeech);
+    if (pool.length < 3) pool = masterVocabList.filter(w => w.id !== correctItem.id);
+    shuffleArray(pool);
+    const distractors = pool.slice(0, 3);
+
+    const allOptions = [correctItem, ...distractors];
+    shuffleArray(allOptions);
+
+    optionsDiv.innerHTML = allOptions.map((opt, idx) => {
+        let label;
+        if (answerField === 'meaning') {
+            label = opt.meaning;
+        } else {
+            label = opt.partOfSpeech === 'Noun' ? `${opt.gender} ${opt.word}` : opt.word;
+        }
+        return `<button class="quiz-option" onclick="handleQuizAnswer(this, ${opt.id === correctItem.id}, ${correctItem.id})" data-correct="${opt.id === correctItem.id}">${label}</button>`;
+    }).join('');
+}
+
+function renderArtikelOptions(correctItem) {
+    const optionsDiv = document.getElementById('quiz-options');
+    const articles = ['der', 'die', 'das'];
+    const correctGender = correctItem.gender;
+
+    optionsDiv.innerHTML = `<div class="flex gap-3">` + articles.map(art => {
+        const isCorrect = art === correctGender;
+        const colors = { der: 'text-blue-600', die: 'text-red-500', das: 'text-green-600' };
+        return `<button class="artikel-btn ${colors[art]}" onclick="handleArtikelAnswer(this, ${isCorrect}, '${correctGender}')" data-artikel="${art}" data-correct="${isCorrect}">
+            <div class="text-2xl">${art}</div>
+            <div class="text-[10px] mt-1 opacity-60">${art === 'der' ? '남성' : art === 'die' ? '여성' : '중성'}</div>
+        </button>`;
+    }).join('') + `</div>`;
+}
+
+function handleQuizAnswer(btn, isCorrect, correctId) {
+    if (quizState.answered) return;
+    quizState.answered = true;
+
+    const q = quizState.questions[quizState.currentIndex];
+
+    // 모든 버튼 비활성화
+    document.querySelectorAll('.quiz-option').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === 'true') b.classList.add('correct');
+    });
+
+    if (isCorrect) {
+        btn.classList.add('correct');
+        quizState.correct++;
+    } else {
+        btn.classList.add('wrong');
+        quizState.wrong++;
+        quizState.wrongList.push(q);
+    }
+
+    // 다음 문제로
+    setTimeout(() => {
+        quizState.currentIndex++;
+        showQuizQuestion();
+    }, isCorrect ? 700 : 1200);
+}
+
+function handleArtikelAnswer(btn, isCorrect, correctGender) {
+    if (quizState.answered) return;
+    quizState.answered = true;
+
+    const q = quizState.questions[quizState.currentIndex];
+
+    document.querySelectorAll('.artikel-btn').forEach(b => {
+        b.disabled = true;
+        if (b.dataset.correct === 'true') b.classList.add('correct');
+    });
+
+    if (isCorrect) {
+        btn.classList.add('correct');
+        quizState.correct++;
+    } else {
+        btn.classList.add('wrong');
+        quizState.wrong++;
+        quizState.wrongList.push(q);
+    }
+
+    setTimeout(() => {
+        quizState.currentIndex++;
+        showQuizQuestion();
+    }, isCorrect ? 700 : 1200);
+}
+
+function quizPlayAudio() {
+    const q = quizState.questions[quizState.currentIndex];
+    if (!q) return;
+    const text = q.partOfSpeech === 'Noun' ? q.gender + ' ' + q.word : q.word;
+    speak(text);
+}
+
+function showQuizResult() {
+    document.getElementById('quiz-active').classList.add('hidden');
+    document.getElementById('quiz-result').classList.remove('hidden');
+
+    const total = quizState.correct + quizState.wrong;
+    const pct = total ? Math.round((quizState.correct / total) * 100) : 0;
+
+    setText('result-correct', quizState.correct);
+    setText('result-wrong', quizState.wrong);
+    setText('result-score', pct + '%');
+
+    // 결과 메시지
+    let emoji, title, subtitle;
+    if (pct === 100) { emoji = '🏆'; title = 'Perfekt!'; subtitle = '모든 문제를 맞혔습니다!'; }
+    else if (pct >= 80) { emoji = '🎉'; title = 'Sehr gut!'; subtitle = '아주 잘했어요!'; }
+    else if (pct >= 60) { emoji = '👍'; title = 'Gut gemacht!'; subtitle = '조금만 더 연습하면 완벽해요!'; }
+    else if (pct >= 40) { emoji = '💪'; title = 'Weiter so!'; subtitle = '계속 연습하면 늘어요!'; }
+    else { emoji = '📚'; title = 'Übung macht den Meister!'; subtitle = '반복 학습이 최고의 방법이에요!'; }
+
+    setText('result-emoji', emoji);
+    setText('result-title', title);
+    setText('result-subtitle', subtitle);
+
+    // 오답 리스트
+    const wrongListDiv = document.getElementById('result-wrong-list');
+    const wrongContainer = document.getElementById('wrong-words-container');
+    if (quizState.wrongList.length > 0) {
+        wrongListDiv.classList.remove('hidden');
+        wrongContainer.innerHTML = quizState.wrongList.map(w => {
+            const word = w.partOfSpeech === 'Noun' ? `${w.gender} ${w.word}` : w.word;
+            const borderColor = w.partOfSpeech === 'Noun' ? 'border-l-blue-400' : w.partOfSpeech === 'Verb' ? 'border-l-red-400' : 'border-l-green-400';
+            return `<div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border-l-4 ${borderColor}">
+                <div>
+                    <span class="font-bold text-slate-700 text-sm">${word}</span>
+                    <span class="text-xs text-slate-400 ml-2">${w.meaning}</span>
+                </div>
+                <button onclick="speak('${w.partOfSpeech === 'Noun' ? w.gender + ' ' + w.word : w.word}')" class="text-lg">🔊</button>
+            </div>`;
+        }).join('');
+    } else {
+        wrongListDiv.classList.add('hidden');
+    }
+
+    // 퀴즈 통계 저장
+    saveQuizHistory(quizState.mode, pct, quizState.correct, quizState.wrong);
+}
+
+function saveQuizHistory(mode, score, correct, wrong) {
+    const key = 'germanVocab_quizHistory';
+    let history = JSON.parse(localStorage.getItem(key) || '[]');
+    history.push({
+        date: new Date().toISOString(),
+        mode: mode,
+        score: score,
+        correct: correct,
+        wrong: wrong
+    });
+    // 최근 50개만 유지
+    if (history.length > 50) history = history.slice(-50);
+    localStorage.setItem(key, JSON.stringify(history));
+}
+
+function exitQuiz() {
+    document.getElementById('quiz-active').classList.add('hidden');
+    document.getElementById('quiz-result').classList.add('hidden');
+    document.getElementById('quiz-setup').classList.remove('hidden');
+}
+
+/* * ==========================================================================
+ * 11. INIT
  * ========================================================================== */
 initApp();

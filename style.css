@@ -172,6 +172,81 @@ body.dark-mode .bg-amber-50 {
 body.dark-mode .text-amber-800 { color: #fbbf24 !important; }
 body.dark-mode .text-amber-700 { color: #fbbf24 !important; }
 
+/* ===== 퀴즈 ===== */
+.quiz-option {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 16px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    text-align: left;
+    font-weight: 600;
+    font-size: 15px;
+    color: #334155;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+.quiz-option:active { transform: scale(0.98); }
+.quiz-option.selected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+.quiz-option.correct {
+    border-color: #10b981 !important;
+    background: #ecfdf5 !important;
+    color: #065f46 !important;
+    animation: popIn 0.3s ease;
+}
+.quiz-option.wrong {
+    border-color: #ef4444 !important;
+    background: #fef2f2 !important;
+    color: #991b1b !important;
+    animation: shake 0.4s ease;
+}
+.quiz-option:disabled { cursor: default; opacity: 0.7; }
+.quiz-option.correct:disabled { opacity: 1; }
+.quiz-option.wrong:disabled { opacity: 1; }
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+@keyframes correctPulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* 퀴즈 다크모드 */
+body.dark-mode .quiz-option {
+    background: #1e293b;
+    border-color: #334155;
+    color: #e2e8f0;
+}
+body.dark-mode .quiz-option.selected { border-color: #818cf8; background: #312e81; color: #c7d2fe; }
+body.dark-mode .quiz-option.correct { border-color: #10b981 !important; background: #064e3b !important; color: #a7f3d0 !important; }
+body.dark-mode .quiz-option.wrong { border-color: #ef4444 !important; background: #450a0a !important; color: #fca5a5 !important; }
+
+/* 관사 퀴즈 버튼 */
+.artikel-btn {
+    flex: 1;
+    padding: 18px 12px;
+    border-radius: 16px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    text-align: center;
+    font-weight: 700;
+    font-size: 18px;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+.artikel-btn:active { transform: scale(0.95); }
+.artikel-btn.correct { border-color: #10b981 !important; background: #ecfdf5 !important; animation: popIn 0.3s ease; }
+.artikel-btn.wrong { border-color: #ef4444 !important; background: #fef2f2 !important; animation: shake 0.4s ease; }
+
+body.dark-mode .artikel-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+body.dark-mode .artikel-btn.correct { border-color: #10b981 !important; background: #064e3b !important; }
+body.dark-mode .artikel-btn.wrong { border-color: #ef4444 !important; background: #450a0a !important; }
+
 /* ===== 결합어 (Kompositum) ===== */
 .compound-etymology {
     margin-top: 4px; padding: 4px 8px;
