@@ -1,93 +1,270 @@
 <!DOCTYPE html>
-
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>독일어 단어장 (Pro Clean)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>DeutschVoca - 독일어 단어장</title>
 
-<!-- 모바일 최적화 설정 -->
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#4f46e5">
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/197/197571.png">
+<meta name="apple-mobile-web-app-title" content="DeutschVoca">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="description" content="SRS 기반 독일어 어휘 학습 앱 A1-B2">
 
 <!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+        surface: { light:'#f8fafc', dark:'#0f172a', card:'#ffffff', cardDark:'#1e293b' }
+      }
+    }
+  }
+}
+</script>
 <link rel="stylesheet" href="style.css">
-
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body class="bg-slate-50 min-h-screen">
 
-<!-- 1. 헤더 및 컨트롤 패널 -->
-<div class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md px-4 py-3">
-    <div class="max-w-4xl mx-auto flex flex-col items-center">
-        <!-- 제목 영역 -->
-        <h1 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Coat_of_arms_of_Germany.svg/240px-Coat_of_arms_of_Germany.svg.png" alt="Bundesadler" class="h-6 w-auto object-contain">
-            <span id="level-title">SRS 단어장</span> 
-            <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full font-bold" id="mode-badge">100단어 챌린지</span>
-        </h1>
-        
-        <!-- 버튼 그룹 -->
-        <div class="mt-2 flex gap-2 w-full max-w-md overflow-x-auto pb-1 no-scrollbar">
-            <button onclick="toggleMeanings()" id="toggleBtn" class="flex-1 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[90px]">
-                👁️ 뜻 가리기
-            </button>
-            <button onclick="undoDelete()" id="undoBtn" class="hidden flex-1 bg-yellow-500 active:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition btn-pop whitespace-nowrap min-w-[90px]">
-                ↩️ 되살리기
-            </button>
-            <button onclick="shuffleCurrentList()" class="flex-1 bg-purple-600 active:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[80px]">
-                🔀 섞기
-            </button>
-            <button onclick="resetList()" class="flex-1 bg-gray-600 active:bg-gray-700 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[80px]">
-                🔄 초기화
-            </button>
-            <button onclick="toggleDarkMode()" id="darkModeBtn" class="flex-1 bg-gray-800 active:bg-gray-900 text-white py-2 px-3 rounded-lg text-sm font-bold shadow transition whitespace-nowrap min-w-[80px]">
-                🌙 다크
-            </button>
+<!-- ===== 상단 헤더 ===== -->
+<header class="sticky top-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white safe-top">
+  <div class="max-w-2xl mx-auto px-4 py-3">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Coat_of_arms_of_Germany.svg/240px-Coat_of_arms_of_Germany.svg.png" alt="DE" class="h-7 w-auto opacity-90">
+        <div>
+          <h1 class="text-lg font-bold leading-tight tracking-tight">DeutschVoca</h1>
+          <p class="text-[10px] text-indigo-200 leading-none" id="header-subtitle">A1-B2 독일어 단어 마스터</p>
         </div>
-        
-        <!-- 가이드 -->
-        <div class="text-[10px] text-gray-400 mt-2 flex justify-between w-full max-w-sm px-2">
-            <span class="flex items-center">⬅️ 왼쪽: 알아요 (학습완료)</span>
-            <span class="flex items-center">오른쪽: 몰라요 (나중에 다시) ➡️</span>
-        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs bg-white/20 backdrop-blur px-2.5 py-1 rounded-full font-semibold" id="mode-badge">
+          <span id="remaining-count">0</span>개 남음
+        </span>
+        <button onclick="toggleDarkMode()" id="darkModeBtn" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm hover:bg-white/30 transition">
+          🌙
+        </button>
+      </div>
     </div>
+  </div>
+</header>
+
+<!-- ===== 뷰: 홈 (대시보드) ===== -->
+<div id="view-home" class="view-page hidden">
+  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+    <!-- 환영 카드 -->
+    <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
+      <h2 class="text-xl font-bold">Willkommen!</h2>
+      <p class="text-indigo-100 text-sm mt-1">오늘도 독일어 단어를 정복해볼까요?</p>
+      <div class="mt-4 grid grid-cols-3 gap-3">
+        <div class="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold" id="stat-total-words">0</div>
+          <div class="text-[10px] text-indigo-200">전체 단어</div>
+        </div>
+        <div class="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold" id="stat-learned">0</div>
+          <div class="text-[10px] text-indigo-200">학습 완료</div>
+        </div>
+        <div class="bg-white/15 backdrop-blur rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold" id="stat-mastery">0%</div>
+          <div class="text-[10px] text-indigo-200">마스터율</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 오늘의 학습 -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+          <span class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">📚</span>
+          오늘의 학습
+        </h3>
+        <span class="text-xs text-slate-400" id="today-date"></span>
+      </div>
+      <!-- 진행률 바 -->
+      <div class="w-full bg-slate-100 rounded-full h-2.5 mb-3">
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-500" id="progress-bar" style="width:0%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-500 mb-4">
+        <span><span id="progress-done">0</span> / <span id="progress-total">100</span> 완료</span>
+        <span id="progress-percent">0%</span>
+      </div>
+      <button onclick="switchView('learn')" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
+        학습 시작하기
+      </button>
+    </div>
+
+    <!-- 품사별 현황 -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+        <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">📊</span>
+        품사별 현황
+      </h3>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3">
+          <span class="w-16 text-xs font-semibold text-blue-600">명사</span>
+          <div class="flex-1 bg-slate-100 rounded-full h-3">
+            <div class="bg-blue-500 h-3 rounded-full transition-all" id="bar-noun" style="width:0%"></div>
+          </div>
+          <span class="text-xs text-slate-500 w-8 text-right" id="home-count-noun">0</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-16 text-xs font-semibold text-red-600">동사</span>
+          <div class="flex-1 bg-slate-100 rounded-full h-3">
+            <div class="bg-red-500 h-3 rounded-full transition-all" id="bar-verb" style="width:0%"></div>
+          </div>
+          <span class="text-xs text-slate-500 w-8 text-right" id="home-count-verb">0</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="w-16 text-xs font-semibold text-green-600">형용사</span>
+          <div class="flex-1 bg-slate-100 rounded-full h-3">
+            <div class="bg-green-500 h-3 rounded-full transition-all" id="bar-adjective" style="width:0%"></div>
+          </div>
+          <span class="text-xs text-slate-500 w-8 text-right" id="home-count-adj">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 학습 팁 -->
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+      <div class="font-bold mb-1 flex items-center gap-1">💡 학습 팁</div>
+      <p class="text-xs leading-relaxed text-amber-700">SRS(간격 반복) 알고리즘이 적용되어 있습니다. 아는 단어는 ⬅️ 왼쪽 스와이프, 모르는 단어는 ➡️ 오른쪽 스와이프하세요. 잘 아는 단어일수록 나중에 다시 나타납니다.</p>
+    </div>
+  </div>
 </div>
 
-<!-- 2. 메인 콘텐츠 (필터 & 카드) -->
-<div class="p-4 max-w-4xl mx-auto space-y-6">
+<!-- ===== 뷰: 학습 ===== -->
+<div id="view-learn" class="view-page hidden">
+  <div class="max-w-2xl mx-auto px-4 py-3">
+    <!-- 학습 컨트롤 -->
+    <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-1">
+      <button onclick="toggleMeanings()" id="toggleBtn" class="flex-shrink-0 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+        👁️ 뜻 가리기
+      </button>
+      <button onclick="undoDelete()" id="undoBtn" class="hidden flex-shrink-0 bg-amber-500 active:bg-amber-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition btn-pop whitespace-nowrap">
+        ↩️ 되살리기
+      </button>
+      <button onclick="shuffleCurrentList()" class="flex-shrink-0 bg-purple-600 active:bg-purple-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+        🔀 섞기
+      </button>
+      <button onclick="resetList()" class="flex-shrink-0 bg-slate-500 active:bg-slate-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+        🔄 초기화
+      </button>
+    </div>
+
     <!-- 품사 필터 -->
-    <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white mb-4">
-        <button onclick="toggleFilter('Noun')" id="btn-noun" class="bg-blue-500 rounded p-1 shadow hover:bg-blue-600 transition active:scale-95">명사 <span id="count-noun">0</span></button>
-        <button onclick="toggleFilter('Verb')" id="btn-verb" class="bg-red-500 rounded p-1 shadow hover:bg-red-600 transition active:scale-95">동사 <span id="count-verb">0</span></button>
-        <button onclick="toggleFilter('Adjective')" id="btn-adjective" class="bg-green-500 rounded p-1 shadow hover:bg-green-600 transition active:scale-95">형용사 <span id="count-adjective">0</span></button>
-        <button onclick="toggleFilter(null)" id="btn-total" class="bg-gray-500 rounded p-1 shadow hover:bg-gray-600 transition active:scale-95">전체 <span id="count-total">0</span></button>
+    <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white mb-3">
+      <button onclick="toggleFilter('Noun')" id="btn-noun" class="bg-blue-500 rounded-xl py-2 shadow-sm hover:bg-blue-600 transition active:scale-95">
+        명사 <span id="count-noun" class="opacity-80">0</span>
+      </button>
+      <button onclick="toggleFilter('Verb')" id="btn-verb" class="bg-red-500 rounded-xl py-2 shadow-sm hover:bg-red-600 transition active:scale-95">
+        동사 <span id="count-verb" class="opacity-80">0</span>
+      </button>
+      <button onclick="toggleFilter('Adjective')" id="btn-adjective" class="bg-green-500 rounded-xl py-2 shadow-sm hover:bg-green-600 transition active:scale-95">
+        형용사 <span id="count-adjective" class="opacity-80">0</span>
+      </button>
+      <button onclick="toggleFilter(null)" id="btn-total" class="bg-slate-600 rounded-xl py-2 shadow-sm hover:bg-slate-700 transition active:scale-95">
+        전체 <span id="count-total" class="opacity-80">0</span>
+      </button>
     </div>
 
-    <!-- 단어 카드 컨테이너 -->
-    <div id="word-container" class="space-y-3 relative pb-20"></div>
+    <!-- 스와이프 가이드 -->
+    <div class="text-[10px] text-slate-400 flex justify-between px-1 mb-2">
+      <span>⬅️ 왼쪽: 알아요 (학습완료)</span>
+      <span>오른쪽: 몰라요 (다시) ➡️</span>
+    </div>
+
+    <!-- 카드 목록 -->
+    <div id="word-container" class="space-y-3 pb-24"></div>
+  </div>
 </div>
 
-<!-- 3. 오버레이 & 오디오 -->
+<!-- ===== 뷰: 통계 ===== -->
+<div id="view-stats" class="view-page hidden">
+  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">📈</span>
+        학습 통계
+      </h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-blue-600" id="stats-total-vocab">0</div>
+          <div class="text-xs text-blue-500 mt-1">전체 단어 수</div>
+        </div>
+        <div class="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-green-600" id="stats-learned-count">0</div>
+          <div class="text-xs text-green-500 mt-1">학습한 단어</div>
+        </div>
+        <div class="bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-100 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-purple-600" id="stats-mastered">0</div>
+          <div class="text-xs text-purple-500 mt-1">마스터한 단어</div>
+        </div>
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 rounded-xl p-4 text-center">
+          <div class="text-3xl font-bold text-amber-600" id="stats-streak">0</div>
+          <div class="text-xs text-amber-500 mt-1">연속 학습일</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 레벨별 현황 -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600">🏆</span>
+        레벨별 진행도
+      </h3>
+      <div class="space-y-3" id="level-progress-container"></div>
+    </div>
+
+    <!-- 최근 학습 기록 -->
+    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
+      <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <span class="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600">📅</span>
+        최근 학습 기록
+      </h3>
+      <div id="history-container" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 축하 오버레이 ===== -->
 <div id="celebration-overlay">
-    <div class="text-center text-white">
-        <div class="thumb-up">👍</div>
-        <h2 class="text-4xl font-bold mt-4">학습 완료!</h2>
-        <p class="text-xl mt-2">오늘의 목표를 달성했습니다.</p>
-        <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition">새로운 100개 시작!</button>
-    </div>
+  <div class="text-center text-white px-6">
+    <div class="thumb-up">🎉</div>
+    <h2 class="text-3xl font-bold mt-4">Ausgezeichnet!</h2>
+    <p class="text-lg mt-2 text-indigo-200">오늘의 목표를 달성했습니다!</p>
+    <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3.5 rounded-2xl font-bold shadow-xl hover:scale-105 transition-all">
+      새로운 100개 시작!
+    </button>
+  </div>
 </div>
-
 <audio id="applause-sound" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg"></audio>
 
-<!-- 푸터 -->
-<div class="text-center text-gray-400 text-xs pb-8 px-4 fixed bottom-0 w-full bg-gray-100 pt-2 pointer-events-none">
-    <p>Tip: SRS 알고리즘이 적용되어 아는 단어는 나중에,<br>모르는 단어는 즉시 반복됩니다.</p>
-</div>
+<!-- ===== 하단 네비게이션 바 ===== -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 safe-bottom" id="bottom-nav">
+  <div class="max-w-2xl mx-auto flex justify-around items-center h-16">
+    <button onclick="switchView('home')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="home">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+      <span class="text-[10px] font-semibold">홈</span>
+    </button>
+    <button onclick="switchView('learn')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="learn">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="text-[10px] font-semibold">학습</span>
+    </button>
+    <button onclick="switchView('stats')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="stats">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="text-[10px] font-semibold">통계</span>
+    </button>
+  </div>
+</nav>
 
-<!-- 4. 자바스크립트 로직 -->
+<!-- JS -->
 <script src="vocab.js"></script>
 <script src="main.js"></script>
 
