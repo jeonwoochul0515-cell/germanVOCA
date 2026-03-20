@@ -55,7 +55,7 @@ function detectWeakAreas() {
     .sort((a,b) => (a[1].correct||0)/Math.max(1,a[1].attempts||1) - (b[1].correct||0)/Math.max(1,b[1].attempts||1))
     .slice(0,20)
     .map(([id,s]) => {
-      const word = vocab.find(w => w.id == id);
+      const word = vocab.find(w => String(w.id) === String(id));
       return { id, word: word?word.word:'?', meaning: word?word.meaning:'', attempts: s.attempts||0, correct: s.correct||0, accuracy: Math.round(((s.correct||0)/Math.max(1,s.attempts||1))*100) };
     });
   return analysis;
@@ -101,6 +101,7 @@ function getTierDistribution() {
 
 // Enhanced Stats Renderer
 function renderEnhancedStats() {
+  try {
   const velocity = calculateLearningVelocity();
   const retention = calculateRetentionRate();
   const weakAreas = detectWeakAreas();
@@ -171,6 +172,7 @@ function renderEnhancedStats() {
       <div class="analytics-card p-3">${weakHTML || '<p class="text-gray-400 text-sm">아직 데이터가 부족합니다</p>'}</div>
     </div>`;
   }
+  } catch(err) { console.error('renderEnhancedStats error:', err); }
 }
 
 // Data Export
@@ -181,6 +183,7 @@ function exportUserData() {
     wordStats: wordStats || {},
     dailyHistory: dailyHistory || {},
     quizHistory: JSON.parse(localStorage.getItem('germanVocab_quizHistory') || '[]'),
+    userXP: parseInt(localStorage.getItem('germanVocab_userXP') || '0'),
     settings: { darkMode: localStorage.getItem('germanVocab_darkMode') === 'true' }
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
@@ -210,7 +213,9 @@ function handleImportFile(event) {
       if (confirm('현재 데이터를 백업 데이터로 교체하시겠습니까?')) {
         wordStats = data.wordStats;
         dailyHistory = data.dailyHistory;
+        if (typeof currentVocabList !== 'undefined') currentVocabList = [];
         if (data.quizHistory) localStorage.setItem('germanVocab_quizHistory', JSON.stringify(data.quizHistory));
+        if (data.userXP) localStorage.setItem('germanVocab_userXP', data.userXP.toString());
         saveState();
         alert('데이터가 복원되었습니다! ✅');
         location.reload();

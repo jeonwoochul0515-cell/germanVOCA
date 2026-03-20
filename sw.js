@@ -9,7 +9,8 @@ const APP_SHELL = [
   '/vocab.js',
   '/manifest.json',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/analytics.js'
 ];
 
 // CDN / external resources — network-first strategy

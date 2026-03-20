@@ -305,8 +305,7 @@ function addXP(amount) {
   userXP += amount;
   const newLevel = Math.floor(Math.sqrt(userXP / 50)) + 1;
   if (newLevel > userLevel) {
-    userLevel = newLevel;
-    showLevelUp(userLevel);
+    showLevelUp(newLevel);
   }
   userLevel = newLevel;
   try {
