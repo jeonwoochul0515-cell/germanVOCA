@@ -18,6 +18,8 @@ let wordStats = {};
 let dailyHistory = {};
 const TARGET_DAILY_COUNT = 100;
 let currentView = 'home';
+let userXP = parseInt(localStorage.getItem('germanVocab_userXP') || '0');
+let userLevel = Math.floor(Math.sqrt(userXP / 50)) + 1;
 
 function initApp() {
     // 다크모드 복원
@@ -28,7 +30,15 @@ function initApp() {
     }
 
     const today = new Date().toDateString();
-    const savedState = localStorage.getItem('germanVocabState_V6');
+    // Migration from V6 to V7
+    let savedState = localStorage.getItem('germanVocabState_V7');
+    if (!savedState) {
+      savedState = localStorage.getItem('germanVocabState_V6');
+      if (savedState) {
+        localStorage.setItem('germanVocabState_V7', savedState);
+        console.log('Migrated from V6 to V7');
+      }
+    }
     if (savedState) {
         const state = JSON.parse(savedState);
         wordStats = state.wordStats || {};
@@ -92,7 +102,10 @@ function switchView(view) {
 
     // 뷰별 갱신
     if (view === 'home') updateDashboard();
-    if (view === 'stats') updateStatsPage();
+    if (view === 'stats') {
+        updateStatsPage();
+        if (typeof renderEnhancedStats === 'function') renderEnhancedStats();
+    }
     if (view === 'learn') renderWords();
     if (view === 'quiz') exitQuiz();
 }
@@ -132,6 +145,8 @@ function updateDashboard() {
     setWidth('bar-noun', (counts.Noun / total * 100) + '%');
     setWidth('bar-verb', (counts.Verb / total * 100) + '%');
     setWidth('bar-adjective', (counts.Adjective / total * 100) + '%');
+
+    updateXPDisplay();
 }
 
 function setText(id, val) {
@@ -247,9 +262,21 @@ function fillList(baseList) {
     const learnedWords = masterVocabList.filter(w => wordStats[w.id] && !newList.some(nl => nl.id === w.id));
     const newWords = masterVocabList.filter(w => !wordStats[w.id] && !newList.some(nl => nl.id === w.id));
 
-    const halfNeeded = Math.floor(needed / 2);
+    // Adaptive ratio based on days since first entry
+    const historyDates = Object.keys(dailyHistory);
+    let daysSinceFirst = 0;
+    if (historyDates.length > 0) {
+        const firstDate = historyDates.map(d => new Date(d)).sort((a, b) => a - b)[0];
+        daysSinceFirst = Math.floor((Date.now() - firstDate.getTime()) / 86400000);
+    }
+    let reviewRatio;
+    if (daysSinceFirst < 7) reviewRatio = 0.4;
+    else if (daysSinceFirst <= 30) reviewRatio = 0.5;
+    else reviewRatio = 0.65;
+
+    const reviewCount = Math.floor(needed * reviewRatio);
     shuffleArray(learnedWords);
-    newList = [...newList, ...learnedWords.slice(0, halfNeeded)];
+    newList = [...newList, ...learnedWords.slice(0, reviewCount)];
 
     const remainingNeeded = TARGET_DAILY_COUNT - newList.length;
     shuffleArray(newWords);
@@ -265,27 +292,116 @@ function fillList(baseList) {
     currentVocabList = newList;
 }
 
+function calcTier(stat) {
+  if (!stat || (stat.correct||0) === 0) return 'NEW';
+  if ((stat.correct||0) === 1) return 'FAMILIAR';
+  if ((stat.correct||0) < 4) return 'DEVELOPING';
+  if ((stat.interval||0) < 7) return 'COMPETENT';
+  if ((stat.interval||0) < 30) return 'PROFICIENT';
+  return 'MASTERED';
+}
+
+function addXP(amount) {
+  userXP += amount;
+  const newLevel = Math.floor(Math.sqrt(userXP / 50)) + 1;
+  if (newLevel > userLevel) {
+    userLevel = newLevel;
+    showLevelUp(userLevel);
+  }
+  userLevel = newLevel;
+  try {
+    localStorage.setItem('germanVocab_userXP', userXP.toString());
+  } catch (e) {
+    console.error('Failed to save XP:', e);
+  }
+  updateXPDisplay();
+}
+
+function updateXPDisplay() {
+  const levelEl = document.getElementById('user-level');
+  const xpEl = document.getElementById('user-xp');
+  if (levelEl) levelEl.textContent = userLevel;
+  if (xpEl) xpEl.textContent = userXP;
+}
+
+function showLevelUp(level) {
+  const badge = document.getElementById('xp-badge');
+  if (badge) {
+    badge.classList.add('level-up');
+    setTimeout(() => badge.classList.remove('level-up'), 1000);
+  }
+}
+
+function getStreakData() {
+  const streak = calculateStreak();
+  const badges = [];
+  if (streak >= 3) badges.push({ name: '3일 연속', icon: '🔥' });
+  if (streak >= 7) badges.push({ name: '1주 연속', icon: '⭐' });
+  if (streak >= 30) badges.push({ name: '1개월 연속', icon: '🏆' });
+  if (streak >= 100) badges.push({ name: '100일 연속', icon: '💎' });
+  return { streak, badges };
+}
+
 function handleSwipeLeft(item) {
-    const stat = wordStats[item.id] || { interval: 0, nextReview: 0 };
-    let newInterval = stat.interval === 0 ? 1 : stat.interval * 2;
-    wordStats[item.id] = { interval: newInterval, nextReview: Date.now() + (newInterval * 24 * 60 * 60 * 1000) };
+    const id = item.id;
+    // Enhanced SRS for correct answer
+    if (!wordStats[id]) wordStats[id] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+    const stat = wordStats[id];
+    stat.correct = (stat.correct || 0) + 1;
+    stat.attempts = (stat.attempts || 0) + 1;
+    stat.lastReview = Date.now();
+
+    // FSRS-inspired interval calculation
+    const diffMod = 1 + (1 - (stat.difficulty || 0.3)) * 0.5;
+    if (stat.interval === 0) stat.interval = 1;
+    else if (stat.interval === 1) stat.interval = 3;
+    else stat.interval = Math.round(stat.interval * (1.5 + diffMod));
+
+    stat.difficulty = Math.max(0.1, (stat.difficulty || 0.3) - 0.05);
+    stat.stability = (stat.stability || 1) * 1.2;
+    stat.nextReview = Date.now() + stat.interval * 86400000;
+
+    // Calculate tier
+    stat.tier = calcTier(stat);
+
+    // XP
+    const xpGain = 10 + Math.round((stat.difficulty || 0.3) * 10);
+    addXP(xpGain);
+
     removeWord(item);
 }
 
 function handleSwipeRight(item) {
-    wordStats[item.id] = { interval: 0, nextReview: Date.now() };
+    const id = item.id;
+    if (!wordStats[id]) wordStats[id] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+    const stat = wordStats[id];
+    stat.attempts = (stat.attempts || 0) + 1;
+    stat.lastReview = Date.now();
+    stat.difficulty = Math.min(1.0, (stat.difficulty || 0.3) + 0.15);
+    stat.stability = Math.max(0.1, (stat.stability || 1) * 0.5);
+    stat.interval = 0;
+    stat.nextReview = Date.now();
+    stat.tier = calcTier(stat);
+
+    // Small XP for attempting
+    addXP(3);
+
     moveWordToBack(item);
 }
 
 function saveState() {
     const done = TARGET_DAILY_COUNT - currentVocabList.length;
-    localStorage.setItem('germanVocabState_V6', JSON.stringify({
-        lastDate: new Date().toDateString(),
-        currentList: currentVocabList,
-        wordStats: wordStats,
-        dailyHistory: dailyHistory,
-        dailyDone: Math.max(0, done)
-    }));
+    try {
+        localStorage.setItem('germanVocabState_V7', JSON.stringify({
+            lastDate: new Date().toDateString(),
+            currentList: currentVocabList,
+            wordStats: wordStats,
+            dailyHistory: dailyHistory,
+            dailyDone: Math.max(0, done)
+        }));
+    } catch (e) {
+        console.error('Failed to save state:', e);
+    }
     updateCounts();
     updateUndoButton();
     setText('remaining-count', currentVocabList.length);
@@ -741,6 +857,7 @@ function handleQuizAnswer(btn, isCorrect, correctId) {
     quizState.answered = true;
 
     const q = quizState.questions[quizState.currentIndex];
+    const qid = q.id;
 
     // 모든 버튼 비활성화
     document.querySelectorAll('.quiz-option').forEach(b => {
@@ -751,11 +868,39 @@ function handleQuizAnswer(btn, isCorrect, correctId) {
     if (isCorrect) {
         btn.classList.add('correct');
         quizState.correct++;
+        // Enhanced SRS for correct quiz answer
+        if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+        const stat = wordStats[qid];
+        stat.correct = (stat.correct || 0) + 1;
+        stat.attempts = (stat.attempts || 0) + 1;
+        stat.lastReview = Date.now();
+        const diffMod = 1 + (1 - (stat.difficulty || 0.3)) * 0.5;
+        if (stat.interval === 0) stat.interval = 1;
+        else if (stat.interval === 1) stat.interval = 3;
+        else stat.interval = Math.round(stat.interval * (1.5 + diffMod));
+        stat.difficulty = Math.max(0.1, (stat.difficulty || 0.3) - 0.05);
+        stat.stability = (stat.stability || 1) * 1.2;
+        stat.nextReview = Date.now() + stat.interval * 86400000;
+        stat.tier = calcTier(stat);
+        const xpGain = 10 + Math.round((stat.difficulty || 0.3) * 10);
+        addXP(xpGain);
     } else {
         btn.classList.add('wrong');
         quizState.wrong++;
         quizState.wrongList.push(q);
+        // SRS for incorrect quiz answer
+        if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+        const stat = wordStats[qid];
+        stat.attempts = (stat.attempts || 0) + 1;
+        stat.lastReview = Date.now();
+        stat.difficulty = Math.min(1.0, (stat.difficulty || 0.3) + 0.15);
+        stat.stability = Math.max(0.1, (stat.stability || 1) * 0.5);
+        stat.interval = 0;
+        stat.nextReview = Date.now();
+        stat.tier = calcTier(stat);
+        addXP(3);
     }
+    saveState();
 
     // 다음 문제로
     setTimeout(() => {
@@ -769,6 +914,7 @@ function handleArtikelAnswer(btn, isCorrect, correctGender) {
     quizState.answered = true;
 
     const q = quizState.questions[quizState.currentIndex];
+    const qid = q.id;
 
     document.querySelectorAll('.artikel-btn').forEach(b => {
         b.disabled = true;
@@ -778,11 +924,39 @@ function handleArtikelAnswer(btn, isCorrect, correctGender) {
     if (isCorrect) {
         btn.classList.add('correct');
         quizState.correct++;
+        // Enhanced SRS for correct artikel answer
+        if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+        const stat = wordStats[qid];
+        stat.correct = (stat.correct || 0) + 1;
+        stat.attempts = (stat.attempts || 0) + 1;
+        stat.lastReview = Date.now();
+        const diffMod = 1 + (1 - (stat.difficulty || 0.3)) * 0.5;
+        if (stat.interval === 0) stat.interval = 1;
+        else if (stat.interval === 1) stat.interval = 3;
+        else stat.interval = Math.round(stat.interval * (1.5 + diffMod));
+        stat.difficulty = Math.max(0.1, (stat.difficulty || 0.3) - 0.05);
+        stat.stability = (stat.stability || 1) * 1.2;
+        stat.nextReview = Date.now() + stat.interval * 86400000;
+        stat.tier = calcTier(stat);
+        const xpGain = 10 + Math.round((stat.difficulty || 0.3) * 10);
+        addXP(xpGain);
     } else {
         btn.classList.add('wrong');
         quizState.wrong++;
         quizState.wrongList.push(q);
+        // SRS for incorrect artikel answer
+        if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
+        const stat = wordStats[qid];
+        stat.attempts = (stat.attempts || 0) + 1;
+        stat.lastReview = Date.now();
+        stat.difficulty = Math.min(1.0, (stat.difficulty || 0.3) + 0.15);
+        stat.stability = Math.max(0.1, (stat.stability || 1) * 0.5);
+        stat.interval = 0;
+        stat.nextReview = Date.now();
+        stat.tier = calcTier(stat);
+        addXP(3);
     }
+    saveState();
 
     setTimeout(() => {
         quizState.currentIndex++;
@@ -846,17 +1020,21 @@ function showQuizResult() {
 
 function saveQuizHistory(mode, score, correct, wrong) {
     const key = 'germanVocab_quizHistory';
-    let history = JSON.parse(localStorage.getItem(key) || '[]');
-    history.push({
-        date: new Date().toISOString(),
-        mode: mode,
-        score: score,
-        correct: correct,
-        wrong: wrong
-    });
-    // 최근 50개만 유지
-    if (history.length > 50) history = history.slice(-50);
-    localStorage.setItem(key, JSON.stringify(history));
+    try {
+        let history = JSON.parse(localStorage.getItem(key) || '[]');
+        history.push({
+            date: new Date().toISOString(),
+            mode: mode,
+            score: score,
+            correct: correct,
+            wrong: wrong
+        });
+        // 최근 50개만 유지
+        if (history.length > 50) history = history.slice(-50);
+        localStorage.setItem(key, JSON.stringify(history));
+    } catch (e) {
+        console.error('Failed to save quiz history:', e);
+    }
 }
 
 function exitQuiz() {

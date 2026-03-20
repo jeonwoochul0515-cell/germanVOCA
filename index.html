@@ -32,6 +32,8 @@ tailwind.config = {
 </head>
 <body class="bg-slate-50 min-h-screen">
 
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">메인 콘텐츠로 건너뛰기</a>
+
 <!-- ===== 상단 헤더 ===== -->
 <header class="sticky top-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white safe-top">
   <div class="max-w-2xl mx-auto px-4 py-3">
@@ -45,9 +47,12 @@ tailwind.config = {
       </div>
       <div class="flex items-center gap-2">
         <span class="text-xs bg-white/20 backdrop-blur px-2.5 py-1 rounded-full font-semibold" id="mode-badge">
-          <span id="remaining-count">0</span>개 남음
+          <span id="remaining-count" aria-live="polite">0</span>개 남음
         </span>
-        <button onclick="toggleDarkMode()" id="darkModeBtn" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm hover:bg-white/30 transition">
+        <span class="text-xs bg-yellow-400/30 backdrop-blur px-2.5 py-1 rounded-full font-semibold" id="xp-badge">
+          Lv.<span id="user-level">1</span> | <span id="user-xp">0</span>XP
+        </span>
+        <button onclick="toggleDarkMode()" id="darkModeBtn" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm hover:bg-white/30 transition" aria-label="다크모드 토글">
           🌙
         </button>
       </div>
@@ -56,6 +61,7 @@ tailwind.config = {
 </header>
 
 <!-- ===== 뷰: 홈 (대시보드) ===== -->
+<div id="main-content"></div>
 <div id="view-home" class="view-page hidden">
   <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
     <!-- 환영 카드 -->
@@ -89,13 +95,13 @@ tailwind.config = {
       </div>
       <!-- 진행률 바 -->
       <div class="w-full bg-slate-100 rounded-full h-2.5 mb-3">
-        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-500" id="progress-bar" style="width:0%"></div>
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-500" id="progress-bar" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
       <div class="flex justify-between text-xs text-slate-500 mb-4">
         <span><span id="progress-done">0</span> / <span id="progress-total">100</span> 완료</span>
         <span id="progress-percent">0%</span>
       </div>
-      <button onclick="switchView('learn')" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
+      <button onclick="switchView('learn')" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base shadow-md hover:shadow-lg active:scale-[0.98] transition-all" aria-label="학습 시작하기">
         학습 시작하기
       </button>
     </div>
@@ -110,21 +116,21 @@ tailwind.config = {
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-blue-600">명사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-blue-500 h-3 rounded-full transition-all" id="bar-noun" style="width:0%"></div>
+            <div class="bg-blue-500 h-3 rounded-full transition-all" id="bar-noun" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-noun">0</span>
         </div>
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-red-600">동사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-red-500 h-3 rounded-full transition-all" id="bar-verb" style="width:0%"></div>
+            <div class="bg-red-500 h-3 rounded-full transition-all" id="bar-verb" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-verb">0</span>
         </div>
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-green-600">형용사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-green-500 h-3 rounded-full transition-all" id="bar-adjective" style="width:0%"></div>
+            <div class="bg-green-500 h-3 rounded-full transition-all" id="bar-adjective" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-adj">0</span>
         </div>
@@ -144,33 +150,33 @@ tailwind.config = {
   <div class="max-w-2xl mx-auto px-4 py-3">
     <!-- 학습 컨트롤 -->
     <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-1">
-      <button onclick="toggleMeanings()" id="toggleBtn" class="flex-shrink-0 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+      <button onclick="toggleMeanings()" id="toggleBtn" class="flex-shrink-0 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap" aria-label="뜻 가리기 토글">
         👁️ 뜻 가리기
       </button>
-      <button onclick="undoDelete()" id="undoBtn" class="hidden flex-shrink-0 bg-amber-500 active:bg-amber-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition btn-pop whitespace-nowrap">
+      <button onclick="undoDelete()" id="undoBtn" class="hidden flex-shrink-0 bg-amber-500 active:bg-amber-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition btn-pop whitespace-nowrap" aria-label="삭제된 단어 되살리기">
         ↩️ 되살리기
       </button>
-      <button onclick="shuffleCurrentList()" class="flex-shrink-0 bg-purple-600 active:bg-purple-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+      <button onclick="shuffleCurrentList()" class="flex-shrink-0 bg-purple-600 active:bg-purple-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap" aria-label="단어 목록 섞기">
         🔀 섞기
       </button>
-      <button onclick="resetList()" class="flex-shrink-0 bg-slate-500 active:bg-slate-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap">
+      <button onclick="resetList()" class="flex-shrink-0 bg-slate-500 active:bg-slate-600 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap" aria-label="단어 목록 초기화">
         🔄 초기화
       </button>
     </div>
 
     <!-- 품사 필터 -->
     <div class="grid grid-cols-4 gap-2 text-center text-xs font-bold text-white mb-3">
-      <button onclick="toggleFilter('Noun')" id="btn-noun" class="bg-blue-500 rounded-xl py-2 shadow-sm hover:bg-blue-600 transition active:scale-95">
-        명사 <span id="count-noun" class="opacity-80">0</span>
+      <button onclick="toggleFilter('Noun')" id="btn-noun" class="bg-blue-500 rounded-xl py-2 shadow-sm hover:bg-blue-600 transition active:scale-95" aria-label="명사 필터" aria-pressed="false">
+        명사 <span id="count-noun" class="opacity-80" aria-live="polite">0</span>
       </button>
-      <button onclick="toggleFilter('Verb')" id="btn-verb" class="bg-red-500 rounded-xl py-2 shadow-sm hover:bg-red-600 transition active:scale-95">
-        동사 <span id="count-verb" class="opacity-80">0</span>
+      <button onclick="toggleFilter('Verb')" id="btn-verb" class="bg-red-500 rounded-xl py-2 shadow-sm hover:bg-red-600 transition active:scale-95" aria-label="동사 필터" aria-pressed="false">
+        동사 <span id="count-verb" class="opacity-80" aria-live="polite">0</span>
       </button>
-      <button onclick="toggleFilter('Adjective')" id="btn-adjective" class="bg-green-500 rounded-xl py-2 shadow-sm hover:bg-green-600 transition active:scale-95">
-        형용사 <span id="count-adjective" class="opacity-80">0</span>
+      <button onclick="toggleFilter('Adjective')" id="btn-adjective" class="bg-green-500 rounded-xl py-2 shadow-sm hover:bg-green-600 transition active:scale-95" aria-label="형용사 필터" aria-pressed="false">
+        형용사 <span id="count-adjective" class="opacity-80" aria-live="polite">0</span>
       </button>
-      <button onclick="toggleFilter(null)" id="btn-total" class="bg-slate-600 rounded-xl py-2 shadow-sm hover:bg-slate-700 transition active:scale-95">
-        전체 <span id="count-total" class="opacity-80">0</span>
+      <button onclick="toggleFilter(null)" id="btn-total" class="bg-slate-600 rounded-xl py-2 shadow-sm hover:bg-slate-700 transition active:scale-95" aria-label="전체 필터" aria-pressed="true">
+        전체 <span id="count-total" class="opacity-80" aria-live="polite">0</span>
       </button>
     </div>
 
@@ -188,6 +194,17 @@ tailwind.config = {
 <!-- ===== 뷰: 통계 ===== -->
 <div id="view-stats" class="view-page hidden">
   <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+    <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl p-4 mb-4" id="streak-display">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm opacity-80">연속 학습</p>
+          <p class="text-3xl font-bold" id="streak-count">0</p>
+          <p class="text-xs opacity-70">일 연속</p>
+        </div>
+        <div class="text-4xl streak-flame" id="streak-icon">🔥</div>
+      </div>
+      <div class="flex gap-2 mt-3 flex-wrap" id="streak-badges"></div>
+    </div>
     <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
       <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
         <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">📈</span>
@@ -230,6 +247,12 @@ tailwind.config = {
       </h3>
       <div id="history-container" class="space-y-2"></div>
     </div>
+
+    <div class="flex gap-2 mt-4 px-1">
+      <button onclick="exportUserData()" class="flex-1 bg-indigo-100 text-indigo-700 rounded-xl py-2.5 text-sm font-semibold" aria-label="학습 데이터 내보내기">📥 데이터 백업</button>
+      <button onclick="importUserData()" class="flex-1 bg-green-100 text-green-700 rounded-xl py-2.5 text-sm font-semibold" aria-label="학습 데이터 가져오기">📤 데이터 복원</button>
+    </div>
+    <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="handleImportFile(event)">
   </div>
 </div>
 
@@ -246,47 +269,47 @@ tailwind.config = {
 
       <!-- 퀴즈 모드 카드 -->
       <div class="space-y-3">
-        <button onclick="startQuiz('de2ko')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all">
+        <button onclick="startQuiz('de2ko')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all" aria-label="독일어에서 한국어 퀴즈 시작">
           <div class="flex items-center gap-4">
             <span class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl">🇩🇪</span>
             <div class="flex-1">
               <h4 class="font-bold text-slate-800">독일어 → 한국어</h4>
               <p class="text-xs text-slate-400 mt-0.5">독일어 단어를 보고 한국어 뜻 맞추기</p>
             </div>
-            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </div>
         </button>
 
-        <button onclick="startQuiz('ko2de')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all">
+        <button onclick="startQuiz('ko2de')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all" aria-label="한국어에서 독일어 퀴즈 시작">
           <div class="flex items-center gap-4">
             <span class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center text-2xl">🇰🇷</span>
             <div class="flex-1">
               <h4 class="font-bold text-slate-800">한국어 → 독일어</h4>
               <p class="text-xs text-slate-400 mt-0.5">한국어 뜻을 보고 독일어 단어 맞추기</p>
             </div>
-            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </div>
         </button>
 
-        <button onclick="startQuiz('listen')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all">
+        <button onclick="startQuiz('listen')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all" aria-label="듣기 퀴즈 시작">
           <div class="flex items-center gap-4">
             <span class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">🎧</span>
             <div class="flex-1">
               <h4 class="font-bold text-slate-800">듣기 퀴즈</h4>
               <p class="text-xs text-slate-400 mt-0.5">독일어 발음을 듣고 단어 맞추기</p>
             </div>
-            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </div>
         </button>
 
-        <button onclick="startQuiz('artikel')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all">
+        <button onclick="startQuiz('artikel')" class="w-full bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-left active:scale-[0.98] transition-all" aria-label="관사 퀴즈 시작">
           <div class="flex items-center gap-4">
             <span class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">📝</span>
             <div class="flex-1">
               <h4 class="font-bold text-slate-800">관사 퀴즈 (der/die/das)</h4>
               <p class="text-xs text-slate-400 mt-0.5">명사의 성별(관사)을 맞추기</p>
             </div>
-            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
           </div>
         </button>
       </div>
@@ -296,8 +319,8 @@ tailwind.config = {
     <div id="quiz-active" class="hidden">
       <!-- 상단 바 -->
       <div class="flex items-center justify-between mb-4">
-        <button onclick="exitQuiz()" class="text-slate-400 hover:text-slate-600 transition flex items-center gap-1 text-sm font-medium">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        <button onclick="exitQuiz()" class="text-slate-400 hover:text-slate-600 transition flex items-center gap-1 text-sm font-medium" aria-label="퀴즈 나가기">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
           나가기
         </button>
         <span class="text-xs font-bold text-slate-500" id="quiz-mode-label">모드</span>
@@ -306,7 +329,7 @@ tailwind.config = {
 
       <!-- 진행률 바 -->
       <div class="w-full bg-slate-100 rounded-full h-2 mb-6">
-        <div class="bg-gradient-to-r from-teal-400 to-cyan-500 h-2 rounded-full transition-all duration-300" id="quiz-progress-bar" style="width:10%"></div>
+        <div class="bg-gradient-to-r from-teal-400 to-cyan-500 h-2 rounded-full transition-all duration-300" id="quiz-progress-bar" style="width:10%" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
 
       <!-- 문제 카드 -->
@@ -315,7 +338,7 @@ tailwind.config = {
         <div class="text-3xl font-bold text-slate-800 mb-1" id="quiz-question-word"></div>
         <div class="text-sm text-slate-400" id="quiz-question-sub"></div>
         <!-- 듣기 퀴즈용 재생 버튼 -->
-        <button id="quiz-listen-btn" class="hidden mt-3 mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-3xl shadow-lg active:scale-95 transition" onclick="quizPlayAudio()">
+        <button id="quiz-listen-btn" class="hidden mt-3 mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-3xl shadow-lg active:scale-95 transition" onclick="quizPlayAudio()" aria-label="발음 듣기">
           🔊
         </button>
       </div>
@@ -361,10 +384,10 @@ tailwind.config = {
 
       <!-- 버튼 -->
       <div class="space-y-3">
-        <button onclick="startQuiz(quizState.mode)" class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white py-3.5 rounded-xl font-bold shadow-md active:scale-[0.98] transition-all">
+        <button onclick="startQuiz(quizState.mode)" class="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white py-3.5 rounded-xl font-bold shadow-md active:scale-[0.98] transition-all" aria-label="퀴즈 다시 도전하기">
           다시 도전하기
         </button>
-        <button onclick="exitQuiz()" class="w-full bg-slate-100 text-slate-600 py-3.5 rounded-xl font-bold active:scale-[0.98] transition-all">
+        <button onclick="exitQuiz()" class="w-full bg-slate-100 text-slate-600 py-3.5 rounded-xl font-bold active:scale-[0.98] transition-all" aria-label="다른 퀴즈 모드 선택">
           다른 모드 선택
         </button>
       </div>
@@ -379,7 +402,7 @@ tailwind.config = {
     <div class="thumb-up">🎉</div>
     <h2 class="text-3xl font-bold mt-4">Ausgezeichnet!</h2>
     <p class="text-lg mt-2 text-indigo-200">오늘의 목표를 달성했습니다!</p>
-    <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3.5 rounded-2xl font-bold shadow-xl hover:scale-105 transition-all">
+    <button onclick="closeCelebration()" class="mt-8 bg-white text-indigo-600 px-8 py-3.5 rounded-2xl font-bold shadow-xl hover:scale-105 transition-all" aria-label="축하 닫고 새로운 100개 시작">
       새로운 100개 시작!
     </button>
   </div>
@@ -387,23 +410,23 @@ tailwind.config = {
 <audio id="applause-sound" src="https://actions.google.com/sounds/v1/crowds/battle_crowd_celebrate_stutter.ogg"></audio>
 
 <!-- ===== 하단 네비게이션 바 ===== -->
-<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 safe-bottom" id="bottom-nav">
+<nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 safe-bottom" id="bottom-nav" role="navigation" aria-label="메인 내비게이션">
   <div class="max-w-2xl mx-auto flex justify-around items-center h-16">
-    <button onclick="switchView('home')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="home">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
-      <span class="text-[10px] font-semibold">홈</span>
+    <button onclick="switchView('home')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="home" aria-label="홈">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+      <span class="text-xs font-semibold">홈</span>
     </button>
-    <button onclick="switchView('learn')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="learn">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-      <span class="text-[10px] font-semibold">학습</span>
+    <button onclick="switchView('learn')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="learn" aria-label="학습">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="text-xs font-semibold">학습</span>
     </button>
-    <button onclick="switchView('quiz')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="quiz">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      <span class="text-[10px] font-semibold">퀴즈</span>
+    <button onclick="switchView('quiz')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="quiz" aria-label="퀴즈">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-xs font-semibold">퀴즈</span>
     </button>
-    <button onclick="switchView('stats')" class="nav-tab flex flex-col items-center gap-0.5 px-4 py-1" data-view="stats">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-      <span class="text-[10px] font-semibold">통계</span>
+    <button onclick="switchView('stats')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="stats" aria-label="통계">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="text-xs font-semibold">통계</span>
     </button>
   </div>
 </nav>
@@ -411,6 +434,7 @@ tailwind.config = {
 <!-- JS -->
 <script src="vocab.js"></script>
 <script src="main.js"></script>
+<script src="analytics.js"></script>
 
 </body>
 </html>

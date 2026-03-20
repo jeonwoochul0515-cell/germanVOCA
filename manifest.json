@@ -1,7 +1,7 @@
 {
   "name": "Deutsch Vokabeln - 독일어 단어장",
   "short_name": "DeutschVoca",
-  "description": "SRS 기반 독일어 어휘 학습 앱 A1-B2",
+  "description": "SRS 기반 독일어 어휘 학습 앱",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -22,7 +22,8 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["education"],
+  "categories": ["education", "language"],
+  "prefer_related_applications": false,
   "lang": "ko",
   "dir": "ltr"
 }
