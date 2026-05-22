@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'deutschvoca-v3';
+const CACHE_VERSION = 'deutschvoca-v4';
 
 // Local app shell assets — cache-first strategy
 const APP_SHELL = [
@@ -10,7 +10,8 @@ const APP_SHELL = [
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
-  '/analytics.js'
+  '/analytics.js',
+  '/gustav.js'
 ];
 
 // CDN / external resources — network-first strategy

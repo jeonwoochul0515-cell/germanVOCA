@@ -1,28 +1,39 @@
-# Blueprint: German Vocab App
+# 프로젝트 청사진 (blueprint.md): DeutschVoca 고도화
 
-## Application Overview
+## 1. 애플리케이션 목적 및 개요
+DeutschVoca는 한국인 학습자(특히 고등학교 1학년 대현이의 눈높이)가 독일어 단어(A1-B2 레벨)를 재미있고 스트레스 없이 효율적으로 암기할 수 있도록 돕는 웹 어플리케이션입니다. 인지심리학 및 행동과학 이론을 바탕으로 설계된 동적인 웹 컴포넌트 환경과 간격 반복 시스템(SRS)을 활용하여 장기 기억 안착과 지속 가능한 공부 습관 형성을 목표로 합니다.
 
-This application is a German vocabulary learning app designed to help users learn German words through a modern, interactive flashcard interface. It incorporates a Spaced Repetition System (SRS) to optimize learning.
+---
 
-## Key Learning Logic (Refined)
+## 2. 스타일, 디자인 및 기존 탑재 기능 상세
+### 시각적 디자인 명세
+- **색상 체계:** 다크 모드에 최적화된 남색 및 보라색 그라데이션(`bg-slate-900`/`from-indigo-600`/`to-purple-600`)을 메인으로 사용합니다. 명사(파란색), 동사(빨간색), 형용사(초록색)의 품사별 테두리 구분을 통해 직관성을 확보합니다.
+- **글래스모피즘(Glassmorphism):** 반투명 효과(`backdrop-filter: blur(12px)`)와 소프트한 다중 레이어 그림자(`box-shadow`)로 입체적이고 트렌디한 모바일 앱 느낌을 줍니다.
+- **애니메이션:** 뷰 전환 시 페이드인 효과, 카드를 왼쪽(앎)/오른쪽(모름)으로 밀어내는 부드러운 스와이프 모션을 제공합니다.
 
-1.  **Daily 100 Words:** The app recommends a list of 100 words to study each day.
-2.  **Leftover Preservation:** Words not successfully learned from the previous day stay in the current list.
-3.  **50/50 Mix Rule:** For any empty slots in the 100-word list:
-    *   50% are "Review" words (already encountered, based on SRS stats).
-    *   50% are "New" words (never studied before).
-4.  **Midnight Reset:** Every night at 12:00 AM, a new daily list is automatically generated upon the first app launch of the day.
-5.  **Continuous Learning:** Once all 100 words are learned, the app automatically refills the list using the 50/50 mix rule to allow for further study.
+### 기 구현 기능 목록
+- **FSRS Spaced Repetition:** 하루 100개의 단어를 50/50 규칙(리뷰 50% + 새로운 단어 50%)에 맞추어 추천하고 복습을 강제합니다.
+- **PWA 및 오프라인 구동:** 서비스 워커(`sw.js`) 캐싱을 통해 네트워크 연결이 끊긴 상태에서도 작동하며 LocalStorage로 학습 진도를 보존합니다.
+- **4가지 시험 모드:** 독일어→한국어, 한국어→독일어, 발음 듣기 퀴즈, 관사(der/die/das) 성별 매칭 퀴즈.
+- **상세 통계 분석:** Goethe 시험 진척도 예측, 오답률 분석, 취약 품사 통계 및 오답 단어 TOP 10 실시간 추출.
 
-## Current Plan
+---
 
-The current plan is to rewrite the recommendation and initialization logic in `main.js` to strictly follow the new user requirements.
+## 3. 이번 고도화 작업의 상세 로드맵 및 단계 [완료]
 
-### Steps:
+### [1단계] 디자인 & 에셋 고도화 (구스타프 Mascot & 이펙트) - [완료]
+- **`<study-buddy-gustav>` 웹 컴포넌트 추가:** 코드로 렌더링되는 아기 강아지 SVG 그래픽을 구축하여 눈 깜빡임, 꼬리 흔들기 애니메이션 및 성장 악세사리 장식을 완벽 지원합니다.
+- **폭죽 애니메이션 (Confetti):** HTML5 Canvas에 물리 중력 엔진 기반의 색종이 폭죽 파티클 효과를 추가해 단어 100개 완료 시의 도파민 분비를 자극합니다.
+- **그라데이션 및 섀도우 개선:** 격(Case) 표시에 세련된 그라데이션 박스를 적용하고 네온 글로우 효과를 카드 디자인에 반영합니다.
 
-1.  **Update `main.js` Logic:**
-    *   Refactor `generateDailyList` to handle leftovers, 50% review, and 50% new words.
-    *   Update `initApp` to check for date changes and trigger the reset.
-    *   Modify the completion state in `renderWords` to trigger a refill instead of just stopping.
-2.  **Ensure Data Persistence:** Continue using `localStorage` to track `wordStats` and the `currentVocabList`.
-3.  **UI Feedback:** Ensure the user knows when a new list is generated or refilled.
+### [2단계] 인지심리학 & 뇌과학 핵심 도구 도입 - [완료]
+- **`<forgetting-curve>` 뇌기억 시각화:** FSRS 학습 간격 및 최종 리뷰 경과 시간에 따른 에빙하우스 망각 확률을 파동 원형 미터로 실시간 계산 및 시각화합니다.
+- **연상 암기법(Mnemonics) 서랍:** 각 카드 하단에 접이식 서랍을 배치하여 힌트를 제공하고, 대현이가 본인만의 연상 문장을 직접 타이핑하여 입력하면 실시간으로 LocalStorage에 연동 저장합니다.
+- **Web Audio 오디오 차임벨:** 스와이프 제스처 시 맑은 소리(정답/오답)를 오실레이터로 합성하여 인출 성공 피드백을 강화합니다.
+
+### [3단계] 습관 형성 & 마찰 감소 로직 연결 - [완료]
+- **스트리크 실드 (Streak Shield):** 간식 상점에서 획득한 스트리크 실드를 사용해 미접속 날짜가 발생하더라도 공부 스트리크가 끊기지 않도록 보호합니다.
+- **PWA 알림 발송:** 알림 발송은 서비스 워커 및 로컬 설정을 통해 브라우저 알림 권한을 획득 시 주기적으로 작동 가능하게 설정합니다.
+- **10초 간편 학습 세션:** 단어 5개만 보고 꺼도 실시간으로 진행도가 온전히 보관되어, 바쁜 고등학생이 언제 어디서든 틈새 공부를 할 수 있도록 마찰력을 제거합니다.
+- **출석 보너스:** 첫 시작 시 화면의 구스타프 캐릭터를 터치하여 쓰다듬는 행동으로 하루 보너스 XP를 획득할 수 있게 설계합니다.
+

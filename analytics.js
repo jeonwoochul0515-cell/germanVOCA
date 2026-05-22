@@ -18,17 +18,28 @@ function calculateRetentionRate() {
   const stats = Object.values(wordStats || {});
   if (!stats.length) return { overall: 0, byLevel: {} };
 
-  const mastered = stats.filter(s => (s.interval || 0) >= 4).length;
-  const overall = Math.round((mastered / stats.length) * 100);
+  // Use Ebbinghaus Average Retention for the overall score
+  const overall = typeof calculateAverageRetention === 'function' ? calculateAverageRetention() : 100;
 
   const byLevel = {};
   ['A1','A2','B1','B2'].forEach(level => {
     const lw = (typeof masterVocabList !== 'undefined' ? masterVocabList : []).filter(w => w.level === level);
     const learned = lw.filter(w => wordStats[w.id]);
-    const mast = lw.filter(w => wordStats[w.id] && (wordStats[w.id].interval||0) >= 4);
+    
+    let sumRetention = 0;
+    let studiedCount = 0;
+    learned.forEach(w => {
+      if (wordStats[w.id] && wordStats[w.id].lastReview) {
+        sumRetention += typeof calculateWordRetention === 'function' ? calculateWordRetention(w.id) : 100;
+        studiedCount++;
+      }
+    });
+
     byLevel[level] = {
-      total: lw.length, learned: learned.length, mastered: mast.length,
-      rate: learned.length ? Math.round((mast.length/learned.length)*100) : 0
+      total: lw.length, 
+      learned: learned.length, 
+      mastered: learned.filter(w => (wordStats[w.id].interval || 0) >= 4).length,
+      rate: studiedCount ? Math.round(sumRetention / studiedCount) : 100
     };
   });
   return { overall, byLevel };
@@ -146,6 +157,32 @@ function renderEnhancedStats() {
     return `<div class="flex items-center justify-between mb-2"><span class="text-sm font-medium">${posKo}</span><div class="flex items-center gap-2"><div class="w-24 bg-gray-200 rounded-full h-2"><div class="h-2 rounded-full bg-${col}-500" style="width:${data.accuracy}%"></div></div><span class="text-sm font-semibold">${data.accuracy}%</span></div></div>`;
   }).join('');
 
+  // 복습 경고 단어 추출 (기억도 60% 미만 단어 중 가장 시급한 10개)
+  const urgentWords = vocab
+    .filter(w => wordStats[w.id] && wordStats[w.id].lastReview)
+    .map(w => {
+      const ret = typeof calculateWordRetention === 'function' ? calculateWordRetention(w.id) : 100;
+      return { word: w, retention: ret };
+    })
+    .filter(item => item.retention < 60)
+    .sort((a, b) => a.retention - b.retention)
+    .slice(0, 10);
+
+  const urgentHTML = urgentWords.length > 0
+    ? urgentWords.map(item => {
+        const word = item.word.partOfSpeech === 'Noun' ? `${item.word.gender} ${item.word.word}` : item.word.word;
+        return `
+          <div class="flex justify-between items-center mb-2 py-1 border-b border-slate-100 dark:border-slate-800 last:border-0">
+            <div>
+              <span class="font-semibold text-slate-700 dark:text-slate-200 text-sm">${word}</span>
+              <span class="text-xs text-slate-400 ml-2">${item.word.meaning}</span>
+            </div>
+            <span class="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-full">${item.retention}%</span>
+          </div>
+        `;
+      }).join('')
+    : '<p class="text-slate-450 dark:text-slate-400 text-xs">기억도가 60% 미만인 단어가 없습니다! 아주 잘하고 계십니다! 👍</p>';
+
   let container = document.getElementById('analytics-container');
   if (!container) {
     const statsView = document.getElementById('view-stats');
@@ -168,6 +205,8 @@ function renderEnhancedStats() {
       <h3 class="font-bold text-lg mt-4">🎯 Goethe 시험 준비도</h3>${examHTML}
       <h3 class="font-bold text-lg mt-4">📈 품사별 성과</h3>
       <div class="analytics-card p-3">${posHTML || '<p class="text-gray-400 text-sm">데이터 수집 중...</p>'}</div>
+      <h3 class="font-bold text-lg mt-4">🚨 복습 시급 단어 TOP 10</h3>
+      <div class="analytics-card p-3">${urgentHTML}</div>
       <h3 class="font-bold text-lg mt-4">⚠️ 약점 단어 TOP 10</h3>
       <div class="analytics-card p-3">${weakHTML || '<p class="text-gray-400 text-sm">아직 데이터가 부족합니다</p>'}</div>
     </div>`;

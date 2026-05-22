@@ -373,3 +373,98 @@ body.dark-mode .analytics-card { background:#1e293b; }
 body.dark-mode .stat-label { color:#94a3b8; }
 .weak-area-indicator { border-left:3px solid #ef4444; padding-left:12px; }
 .strong-area-indicator { border-left:3px solid #22c55e; padding-left:12px; }
+
+/* ===== 글래스모피즘 & 카드 고도화 스타일 ===== */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+}
+body.dark-mode .glass-panel {
+    background: rgba(30, 41, 59, 0.7) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 네온 글로우 스타일 */
+.glow-noun {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.15), 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 2px solid rgba(59, 130, 246, 0.5) !important;
+}
+.glow-verb {
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.15), 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 2px solid rgba(239, 68, 68, 0.5) !important;
+}
+.glow-adjective {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.15), 0 4px 6px -1px rgba(0,0,0,0.05);
+    border: 2px solid rgba(16, 185, 129, 0.5) !important;
+}
+body.dark-mode .glow-noun { border-color: rgba(59, 130, 246, 0.6) !important; }
+body.dark-mode .glow-verb { border-color: rgba(239, 68, 68, 0.6) !important; }
+body.dark-mode .glow-adjective { border-color: rgba(16, 185, 129, 0.6) !important; }
+
+/* 연상법 서랍 슬라이딩 */
+.mnemonic-drawer {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+.mnemonic-drawer.open {
+    max-height: 200px;
+    opacity: 1;
+}
+
+/* XP 상승 플로팅 애니메이션 */
+.xp-float-num {
+    position: absolute;
+    color: #eab308;
+    font-weight: bold;
+    font-size: 1.125rem;
+    pointer-events: none;
+    animation: floatUp 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    z-index: 60;
+}
+@keyframes floatUp {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-45px); opacity: 0; }
+}
+
+/* 모달 팝업 기초 스타일 */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.modal-content {
+    background: white;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 440px;
+    padding: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(20px) scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+body.dark-mode .modal-content {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.modal-overlay.active .modal-content {
+    transform: translateY(0) scale(1);
+}
+

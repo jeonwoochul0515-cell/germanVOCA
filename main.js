@@ -21,6 +21,19 @@ let currentView = 'home';
 let userXP = parseInt(localStorage.getItem('germanVocab_userXP') || '0');
 let userLevel = Math.floor(Math.sqrt(userXP / 50)) + 1;
 
+// === 고도화 변수 및 상태 관리 ===
+let treatCount = parseInt(localStorage.getItem('germanVocab_treats') || '0');
+let shieldCount = parseInt(localStorage.getItem('germanVocab_shields') || '0');
+let userSavedMnemonics = JSON.parse(localStorage.getItem('germanVocab_userMnemonics') || '{}');
+
+let dailyQuests = {
+    date: new Date().toDateString(),
+    learnedCount: 0,
+    mnemonicWritten: 0,
+    petCount: 0,
+    claimed: false
+};
+
 function initApp() {
     // 다크모드 복원
     if (localStorage.getItem('germanVocab_darkMode') === 'true') {
@@ -29,7 +42,31 @@ function initApp() {
         if (btn) btn.innerHTML = '☀️';
     }
 
+    // 사운드 음소거 상태 복원 및 버튼 UI 싱크
+    updateMuteButton();
+
     const today = new Date().toDateString();
+    
+    // 일일 퀘스트 복원 및 리셋
+    const savedQuests = localStorage.getItem('germanVocab_dailyQuests');
+    if (savedQuests) {
+        const qState = JSON.parse(savedQuests);
+        if (qState.date === today) {
+            dailyQuests = qState;
+        } else {
+            dailyQuests = {
+                date: today,
+                learnedCount: 0,
+                mnemonicWritten: 0,
+                petCount: 0,
+                claimed: false
+            };
+            saveQuestsState();
+        }
+    } else {
+        saveQuestsState();
+    }
+
     // Migration from V6 to V7
     let savedState = localStorage.getItem('germanVocabState_V7');
     if (!savedState) {
@@ -39,13 +76,32 @@ function initApp() {
         console.log('Migrated from V6 to V7');
       }
     }
+    
     if (savedState) {
         const state = JSON.parse(savedState);
         wordStats = state.wordStats || {};
         dailyHistory = state.dailyHistory || {};
-        if (state.lastDate !== today) {
+        
+        // --- 스트리크 실드 로직 ---
+        if (state.lastDate && state.lastDate !== today) {
+            const lastDateObj = new Date(state.lastDate);
+            const yesterdayObj = new Date();
+            yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+            
+            // 어제 학습을 걸렀을 때
+            if (lastDateObj.toDateString() !== yesterdayObj.toDateString()) {
+                if (shieldCount > 0) {
+                    shieldCount--;
+                    localStorage.setItem('germanVocab_shields', shieldCount.toString());
+                    // 로컬스토리지 즉시 동기화
+                    setTimeout(() => {
+                        alert("🛡️ 구스타프가 '스트리크 실드'를 작동하여 대현 님의 연속 공부 스트리크를 보호했습니다! (남은 실드: " + shieldCount + "개)");
+                    }, 500);
+                }
+            }
+            
             // 어제 학습 기록 저장
-            if (state.lastDate && state.dailyDone) {
+            if (state.dailyDone) {
                 dailyHistory[state.lastDate] = state.dailyDone;
             }
             fillList(state.currentList || []);
@@ -67,6 +123,23 @@ function initApp() {
         }
     }
 
+    // 구스타프 쓰다듬기 이벤트 연결
+    setTimeout(() => {
+        const gustavEl = document.getElementById('home-gustav');
+        if (gustavEl) {
+            gustavEl.addEventListener('gustav-pet', (e) => {
+                const count = e.detail.petCount;
+                dailyQuests.petCount = count;
+                addXP(5);
+                triggerFloatXP(gustavEl, 5);
+                
+                checkQuests();
+                saveQuestsState();
+                updateQuestsUI();
+            });
+        }
+    }, 100);
+
     saveState();
     renderWords();
     updateDashboard();
@@ -78,6 +151,10 @@ function initApp() {
         const d = new Date();
         dateEl.textContent = `${d.getMonth()+1}/${d.getDate()} (${['일','월','화','수','목','금','토'][d.getDay()]})`;
     }
+
+    updateQuestsUI();
+    updateShieldUI();
+    updateTreatsUI();
 }
 
 /* * ==========================================================================
@@ -146,7 +223,29 @@ function updateDashboard() {
     setWidth('bar-verb', (counts.Verb / total * 100) + '%');
     setWidth('bar-adjective', (counts.Adjective / total * 100) + '%');
 
+    // 마스코트 구스타프 컴포넌트 갱신
+    const gustavEl = document.getElementById('home-gustav');
+    if (gustavEl) {
+        const targetMascotLevel = Math.min(4, userLevel);
+        gustavEl.setAttribute('level', targetMascotLevel);
+        setText('gustav-level-text', targetMascotLevel);
+    }
+
+    // 에빙하우스 기억 잔존율 컴포넌트 갱신
+    const forgettingEl = document.getElementById('home-forgetting');
+    if (forgettingEl) {
+        const retValue = typeof calculateAverageRetention === 'function' ? calculateAverageRetention() : 100;
+        forgettingEl.setAttribute('value', retValue);
+        const infoEl = document.getElementById('memory-decay-info');
+        if (infoEl) {
+            if (retValue >= 80) infoEl.textContent = "두뇌 기억 유지도 최상! 🧠";
+            else if (retValue >= 50) infoEl.textContent = "복습이 딱 알맞은 시기 ⏰";
+            else infoEl.textContent = "망각 속도가 빨라요, 즉시 복습! 🚨";
+        }
+    }
+
     updateXPDisplay();
+    updateShieldUI();
 }
 
 function setText(id, val) {
@@ -329,6 +428,18 @@ function showLevelUp(level) {
     badge.classList.add('level-up');
     setTimeout(() => badge.classList.remove('level-up'), 1000);
   }
+  
+  // Gustav level-up reaction
+  const gustavEl = document.getElementById('home-gustav');
+  if (gustavEl && typeof gustavEl.triggerLevelUpEffect === 'function') {
+    const oldMascotLevel = Math.min(4, userLevel);
+    const newMascotLevel = Math.min(4, level);
+    if (newMascotLevel > oldMascotLevel) {
+      setTimeout(() => {
+        gustavEl.triggerLevelUpEffect();
+      }, 500);
+    }
+  }
 }
 
 function getStreakData() {
@@ -343,6 +454,10 @@ function getStreakData() {
 
 function handleSwipeLeft(item) {
     const id = item.id;
+    
+    // 정답 사운드 재생
+    if (typeof SoundEngine !== 'undefined') SoundEngine.playSuccess();
+
     // Enhanced SRS for correct answer
     if (!wordStats[id]) wordStats[id] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
     const stat = wordStats[id];
@@ -367,11 +482,29 @@ function handleSwipeLeft(item) {
     const xpGain = 10 + Math.round((stat.difficulty || 0.3) * 10);
     addXP(xpGain);
 
+    // 일일 퀘스트 학습 개수 누적
+    dailyQuests.learnedCount = (dailyQuests.learnedCount || 0) + 1;
+    checkQuests();
+    saveQuestsState();
+    updateQuestsUI();
+
+    // 말풍선 반응
+    if (Math.random() < 0.15) {
+        const gustavEl = document.getElementById('home-gustav');
+        if (gustavEl) {
+            gustavEl.say("정답! 대현 님의 독일어 뇌세포가 성장하고 있어요! 왈!", 3500);
+        }
+    }
+
     removeWord(item);
 }
 
 function handleSwipeRight(item) {
     const id = item.id;
+    
+    // 오답 사운드 재생
+    if (typeof SoundEngine !== 'undefined') SoundEngine.playFailure();
+
     if (!wordStats[id]) wordStats[id] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
     const stat = wordStats[id];
     stat.attempts = (stat.attempts || 0) + 1;
@@ -384,6 +517,19 @@ function handleSwipeRight(item) {
 
     // Small XP for attempting
     addXP(3);
+
+    // 말풍선 반응 (20% 확률로 연상 서랍 유도)
+    if (Math.random() < 0.20) {
+        const gustavEl = document.getElementById('home-gustav');
+        if (gustavEl) {
+            const hasMnemonic = getSystemMnemonic(item.word) || userSavedMnemonics[item.word];
+            if (hasMnemonic) {
+                gustavEl.say("괜찮아요! 연상 서랍 💡의 암기 힌트를 확인해 보세요! 멍!", 4000);
+            } else {
+                gustavEl.say("공부는 반복이에요! 제가 끝까지 도와줄게요! 화이팅! 멍!", 3000);
+            }
+        }
+    }
 
     moveWordToBack(item);
 }
@@ -436,7 +582,8 @@ function renderWords() {
 
 function createCard(item, index) {
     const card = document.createElement('div');
-    card.className = "bg-white p-4 rounded-2xl shadow-sm border border-slate-100 card-touch flex flex-col relative overflow-hidden select-none mb-1";
+    const glowClasses = { Noun: "glow-noun", Verb: "glow-verb", Adjective: "glow-adjective" };
+    card.className = `bg-white p-4 rounded-2xl shadow-sm border border-slate-100 card-touch flex flex-col relative overflow-hidden select-none mb-2 ${glowClasses[item.partOfSpeech] || ''}`;
 
     const borderColors = { Noun: "border-l-blue-500", Verb: "border-l-red-500", Adjective: "border-l-green-500" };
     const textColors = { Noun: "text-blue-600", Verb: "text-red-600", Adjective: "text-green-600" };
@@ -445,12 +592,21 @@ function createCard(item, index) {
     let mainText = item.partOfSpeech === 'Noun' ? `${item.gender.charAt(0).toUpperCase() + item.gender.slice(1)} ${item.word}` : item.word;
     let textColor = textColors[item.partOfSpeech] || "text-slate-700";
 
-    // 배지
+    // 배지 구성
     let badges = '';
+    
+    // 🎯 내신 필수 / 💯 수능 대비 강조 배지 추가
+    if (item.level.startsWith('A')) {
+        badges += `<span class="text-[9px] bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded-md font-bold border border-rose-100">🎯 내신 필수</span>`;
+    } else if (item.level.startsWith('B')) {
+        badges += `<span class="text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-bold border border-indigo-100">💯 수능 대비</span>`;
+    }
+
     if (item.cognate) badges += `<span class="text-[9px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-md font-bold border border-indigo-100">🌱 동일어원</span>`;
     if (item.polysemy) badges += `<span class="text-[9px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded-md font-bold border border-orange-100">📚 다의어</span>`;
     const compound = compoundData[item.id];
     if (compound) badges += `<span class="text-[9px] bg-pink-50 text-pink-600 px-1.5 py-0.5 rounded-md font-bold border border-pink-100">🔗 결합어</span>`;
+    
     const rektion = rektionData[item.id];
     if (rektion) {
         if (rektion.type === 'reflexive') {
@@ -462,6 +618,16 @@ function createCard(item, index) {
 
     let levelColor = item.level.startsWith('A') ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-purple-50 text-purple-700 border-purple-200";
 
+    // 에빙하우스 기억 잔존율
+    const retention = typeof calculateWordRetention === 'function' ? calculateWordRetention(item.id) : 100;
+    let retentionBarColor = "bg-emerald-500";
+    if (retention < 40) retentionBarColor = "bg-red-500";
+    else if (retention < 75) retentionBarColor = "bg-amber-500";
+
+    // 연상 힌트 DB 로드
+    const sysMnemonic = typeof getSystemMnemonic === 'function' ? getSystemMnemonic(item.word) : "";
+    const userMnemonic = userSavedMnemonics[item.word] || "";
+
     card.innerHTML = `
         <div class="swipe-hint hint-left font-bold text-emerald-500 text-xs">알아요 ✅</div>
         <div class="swipe-hint hint-right font-bold text-orange-500 text-xs">몰라요 ❓</div>
@@ -472,7 +638,7 @@ function createCard(item, index) {
             </div>
             <span class="text-[10px] ${levelColor} px-1.5 py-0.5 rounded-md font-bold border">${item.level}</span>
         </div>
-        <div class="flex justify-between items-end w-full pointer-events-none">
+        <div class="flex justify-between items-end w-full pointer-events-none mb-2">
             <div class="flex flex-col w-full meaning-container transition-opacity duration-300 ${isMeaningHidden ? '' : 'revealed'}">
                 <span class="text-slate-800 font-medium text-lg leading-tight">${item.meaning}</span>
                 <span class="text-slate-400 text-xs italic mt-0.5">${item.english}</span>
@@ -482,6 +648,36 @@ function createCard(item, index) {
             <button class="speaker-btn pointer-events-auto text-slate-300 hover:text-indigo-600 p-2 transition z-10" onclick="event.stopPropagation(); speak('${item.partOfSpeech === 'Noun' ? item.gender + ' ' + item.word : item.word}')">
                 <span class="text-xl">🔊</span>
             </button>
+        </div>
+
+        <!-- 뇌과학 게이지 & 연상 서랍 토글 바 -->
+        <div class="flex items-center justify-between border-t border-slate-100 pt-2.5 mt-1 text-xs">
+            <div class="flex items-center gap-1.5 text-slate-400 font-semibold">
+                <span>기억도</span>
+                <div class="w-16 bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div class="${retentionBarColor} h-2 rounded-full" style="width: ${retention}%"></div>
+                </div>
+                <span class="font-bold ${retention < 40 ? 'text-red-500' : retention < 75 ? 'text-amber-500' : 'text-emerald-500'}">${retention}%</span>
+            </div>
+            <button onclick="event.stopPropagation(); toggleMnemonicDrawer(this)" class="text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5 transition" aria-expanded="false">
+                💡 연상 서랍 <span class="arrow-icon transition-transform duration-200">▼</span>
+            </button>
+        </div>
+
+        <!-- 연상 암기법 접이식 서랍 -->
+        <div class="mnemonic-drawer mt-2 bg-indigo-50/50 dark:bg-slate-800/40 rounded-xl p-3 border border-indigo-100/50">
+            ${sysMnemonic ? `<div class="mb-2 text-xs text-slate-600 dark:text-slate-300"><span class="font-bold text-indigo-600 dark:text-indigo-400">추천 연상법:</span> ${sysMnemonic}</div>` : ''}
+            
+            <div class="flex gap-2 items-center mt-1">
+                <input type="text" placeholder="${sysMnemonic ? '또는 나만의 연상법을 기록하세요...' : '기억하기 쉬운 나만의 연상법을 기록하세요...'}" 
+                       value="${userMnemonic}" 
+                       class="mnemonic-input flex-1 px-3 py-1.5 bg-white dark:bg-slate-700 text-xs border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:text-slate-100" 
+                       onclick="event.stopPropagation()">
+                <button onclick="event.stopPropagation(); saveUserMnemonic(this, '${item.word}')" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition">
+                    저장
+                </button>
+            </div>
         </div>
     `;
     attachSwipeEvents(card, item, index);
@@ -706,6 +902,10 @@ function speak(text) {
 function triggerCelebration() {
     const ov = document.getElementById('celebration-overlay');
     if (ov) ov.classList.add('active');
+    
+    // 폭죽(Confetti) 구동
+    runConfettiEffect();
+
     const au = document.getElementById('applause-sound');
     if (au) au.play().catch(() => {});
 }
@@ -1043,6 +1243,292 @@ function exitQuiz() {
 }
 
 /* * ==========================================================================
- * 11. INIT
+ * 11. GUSTAV & BRAIN SCIENCE ADDITIONS (V7)
+ * ========================================================================== */
+
+function toggleMnemonicDrawer(btn) {
+    const card = btn.closest('.card-touch') || btn.closest('.bg-white');
+    if (!card) return;
+    const drawer = card.querySelector('.mnemonic-drawer');
+    const arrow = btn.querySelector('.arrow-icon');
+    if (drawer) {
+        const isOpen = drawer.classList.contains('open');
+        drawer.classList.toggle('open', !isOpen);
+        btn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+        if (arrow) {
+            arrow.style.transform = !isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    }
+}
+
+function saveUserMnemonic(btn, word) {
+    const container = btn.closest('.mnemonic-drawer');
+    if (!container) return;
+    const input = container.querySelector('.mnemonic-input');
+    if (!input) return;
+    const value = input.value.trim();
+    
+    userSavedMnemonics[word] = value;
+    localStorage.setItem('germanVocab_userMnemonics', JSON.stringify(userSavedMnemonics));
+    
+    alert('나만의 연상법이 저장되었습니다! 💡');
+    
+    if (value.length > 0) {
+        dailyQuests.mnemonicWritten = 1;
+        checkQuests();
+        saveQuestsState();
+        updateQuestsUI();
+    }
+}
+
+function toggleMute() {
+    if (typeof SoundEngine !== 'undefined') {
+        const currentlyMuted = SoundEngine.isMuted();
+        SoundEngine.setMute(!currentlyMuted);
+        updateMuteButton();
+    }
+}
+
+function updateMuteButton() {
+    const btn = document.getElementById('muteBtn');
+    if (btn && typeof SoundEngine !== 'undefined') {
+        const isMuted = SoundEngine.isMuted();
+        btn.innerHTML = isMuted ? '🔇' : '🔊';
+        btn.setAttribute('aria-label', isMuted ? '음소거 켬' : '음소거 끔');
+    }
+}
+
+function openShopModal() {
+    const shopModal = document.getElementById('shop-modal');
+    if (shopModal) {
+        shopModal.classList.add('active');
+        updateTreatsUI();
+    }
+}
+
+function closeShopModal() {
+    const shopModal = document.getElementById('shop-modal');
+    if (shopModal) {
+        shopModal.classList.remove('active');
+    }
+}
+
+function buyStreakShield() {
+    if (treatCount >= 50) {
+        treatCount -= 50;
+        shieldCount += 1;
+        localStorage.setItem('germanVocab_treats', treatCount.toString());
+        localStorage.setItem('germanVocab_shields', shieldCount.toString());
+        
+        updateTreatsUI();
+        updateShieldUI();
+        
+        if (typeof SoundEngine !== 'undefined') SoundEngine.playSuccess();
+        alert('스트리크 실드(방어막)를 구매했습니다! 🛡️ (보유 개수: ' + shieldCount + '개)');
+    } else {
+        if (typeof SoundEngine !== 'undefined') SoundEngine.playFailure();
+        alert('간식이 부족합니다! 🍖 일일 퀘스트를 완료하여 간식을 모아보세요!');
+    }
+}
+
+function petGustavDirectly() {
+    const gustavEl = document.getElementById('home-gustav');
+    if (gustavEl && typeof gustavEl.handlePet === 'function') {
+        gustavEl.handlePet();
+    }
+}
+
+function checkQuests() {
+    if (!dailyQuests.claimed) {
+        const q1 = (dailyQuests.learnedCount || 0) >= 15;
+        const q2 = (dailyQuests.mnemonicWritten || 0) >= 1;
+        const q3 = (dailyQuests.petCount || 0) >= 3;
+        
+        if (q1 && q2 && q3) {
+            dailyQuests.claimed = true;
+            treatCount += 30;
+            localStorage.setItem('germanVocab_treats', treatCount.toString());
+            
+            updateTreatsUI();
+            updateQuestsUI();
+            
+            if (typeof SoundEngine !== 'undefined') {
+                SoundEngine.playQuestComplete();
+            }
+            
+            runConfettiEffect();
+            
+            setTimeout(() => {
+                alert("🎉 축하합니다! 오늘의 두뇌 퀘스트를 모두 완료하여 구스타프의 간식 🍖 30개를 획득하셨습니다! 간식 상점에서 스트리크 실드를 구매해 보세요!");
+            }, 600);
+        }
+    }
+}
+
+function saveQuestsState() {
+    localStorage.setItem('germanVocab_dailyQuests', JSON.stringify(dailyQuests));
+}
+
+function updateQuestsUI() {
+    const chk1 = document.getElementById('quest-chk-1');
+    const prg1 = document.getElementById('quest-progress-1');
+    const lCount = dailyQuests.learnedCount || 0;
+    if (chk1) chk1.checked = lCount >= 15;
+    if (prg1) prg1.textContent = `${Math.min(lCount, 15)} / 15`;
+
+    const chk2 = document.getElementById('quest-chk-2');
+    const prg2 = document.getElementById('quest-progress-2');
+    const mCount = dailyQuests.mnemonicWritten || 0;
+    if (chk2) chk2.checked = mCount >= 1;
+    if (prg2) prg2.textContent = `${Math.min(mCount, 1)} / 1`;
+
+    const chk3 = document.getElementById('quest-chk-3');
+    const prg3 = document.getElementById('quest-progress-3');
+    const pCount = dailyQuests.petCount || 0;
+    if (chk3) chk3.checked = pCount >= 3;
+    if (prg3) prg3.textContent = `${Math.min(pCount, 3)} / 3`;
+}
+
+function updateShieldUI() {
+    const shieldCountEl = document.getElementById('shield-count');
+    if (shieldCountEl) {
+        shieldCountEl.textContent = shieldCount;
+    }
+}
+
+function updateTreatsUI() {
+    const treatCountEl = document.getElementById('shop-treat-count');
+    if (treatCountEl) {
+        treatCountEl.textContent = treatCount;
+    }
+}
+
+function triggerFloatXP(targetEl, amount) {
+    if (!targetEl) return;
+    const rect = targetEl.getBoundingClientRect();
+    const x = rect.left + window.scrollX + rect.width / 2;
+    const y = rect.top + window.scrollY;
+    
+    const floatEl = document.createElement('div');
+    floatEl.className = 'xp-float-num';
+    floatEl.textContent = `+${amount} XP`;
+    floatEl.style.left = `${x}px`;
+    floatEl.style.top = `${y}px`;
+    floatEl.style.transform = 'translate(-50%, -100%)';
+    floatEl.style.position = 'absolute';
+    
+    document.body.appendChild(floatEl);
+    
+    setTimeout(() => {
+        floatEl.remove();
+    }, 800);
+}
+
+function runConfettiEffect() {
+    const canvas = document.getElementById('confetti-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const colors = ['#f54242', '#42f554', '#4287f5', '#f5dc42', '#d542f5', '#42f5d5', '#ff9900'];
+    const particles = [];
+    const particleCount = 120;
+    
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: canvas.height + Math.random() * 20,
+            vx: (Math.random() - 0.5) * 8,
+            vy: -15 - Math.random() * 15,
+            size: 5 + Math.random() * 8,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 10,
+            gravity: 0.4 + Math.random() * 0.3,
+            opacity: 1
+        });
+    }
+    
+    function update() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        let active = false;
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity;
+            p.rotation += p.rotationSpeed;
+            
+            if (p.y > canvas.height * 0.8) {
+                p.opacity -= 0.02;
+            }
+            
+            if (p.opacity > 0 && p.y < canvas.height + 20) {
+                active = true;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.globalAlpha = p.opacity;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.restore();
+            }
+        });
+        
+        if (active) {
+            requestAnimationFrame(update);
+        } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    }
+    
+    update();
+}
+
+function calculateWordRetention(wordId) {
+    const stat = wordStats[wordId];
+    if (!stat || !stat.lastReview) return 100;
+    
+    const elapsedDays = (Date.now() - stat.lastReview) / 86400000;
+    const stability = Math.max(0.2, stat.stability || stat.interval || 1);
+    
+    const retention = Math.exp(-elapsedDays / stability);
+    return Math.max(10, Math.round(retention * 100));
+}
+
+function calculateAverageRetention() {
+    const ids = Object.keys(wordStats).filter(id => wordStats[id].lastReview);
+    if (ids.length === 0) return 100;
+    
+    let sum = 0;
+    ids.forEach(id => {
+        sum += calculateWordRetention(id);
+    });
+    return Math.round(sum / ids.length);
+}
+
+// Bind to window to ensure global availability
+window.toggleMnemonicDrawer = toggleMnemonicDrawer;
+window.saveUserMnemonic = saveUserMnemonic;
+window.toggleMute = toggleMute;
+window.updateMuteButton = updateMuteButton;
+window.openShopModal = openShopModal;
+window.closeShopModal = closeShopModal;
+window.buyStreakShield = buyStreakShield;
+window.petGustavDirectly = petGustavDirectly;
+window.checkQuests = checkQuests;
+window.saveQuestsState = saveQuestsState;
+window.updateQuestsUI = updateQuestsUI;
+window.updateShieldUI = updateShieldUI;
+window.updateTreatsUI = updateTreatsUI;
+window.triggerFloatXP = triggerFloatXP;
+window.runConfettiEffect = runConfettiEffect;
+window.calculateWordRetention = calculateWordRetention;
+window.calculateAverageRetention = calculateAverageRetention;
+
+/* * ==========================================================================
+ * 12. INIT
  * ========================================================================== */
 initApp();
