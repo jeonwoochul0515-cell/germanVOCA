@@ -302,6 +302,15 @@ class StudyBuddyGustav extends HTMLElement {
 
     // 하트 피어오르는 애니메이션 효과
     this.spawnHearts();
+    this.spawnSparkles();
+
+    // 점프 애니메이션 구동
+    const wrapper = this.shadowRoot.querySelector(".mascot-svg-wrapper");
+    if (wrapper) {
+      wrapper.classList.remove("jumping");
+      void wrapper.offsetWidth; // Trigger reflow to restart animation
+      wrapper.classList.add("jumping");
+    }
 
     // 말풍선 대사 출력
     const petQuotes = this.quotes.pet;
@@ -322,7 +331,26 @@ class StudyBuddyGustav extends HTMLElement {
       container.appendChild(heart);
       
       // 애니메이션 완료 후 삭제
-      setTimeout(() => heart.remove(), 800);
+      setTimeout(() => heart.remove(), 850);
+    }
+  }
+
+  spawnSparkles() {
+    const container = this.shadowRoot.querySelector(".effect-container");
+    const sparkles = ["✨", "⭐", "🎉", "🌟"];
+    for (let i = 0; i < 6; i++) {
+      const sparkle = document.createElement("div");
+      sparkle.className = "sparkle";
+      sparkle.innerHTML = sparkles[Math.floor(Math.random() * sparkles.length)];
+      sparkle.style.left = `${20 + Math.random() * 60}%`;
+      sparkle.style.bottom = `${30 + Math.random() * 40}%`;
+      sparkle.style.fontSize = `${10 + Math.random() * 12}px`;
+      sparkle.style.setProperty("--dx", `${(Math.random() - 0.5) * 80}px`);
+      sparkle.style.setProperty("--dy", `-${40 + Math.random() * 60}px`);
+      sparkle.style.animationDelay = `${i * 0.08}s`;
+      container.appendChild(sparkle);
+      
+      setTimeout(() => sparkle.remove(), 1100);
     }
   }
 
@@ -414,15 +442,29 @@ class StudyBuddyGustav extends HTMLElement {
           cursor: pointer;
           position: relative;
           z-index: 10;
-          transition: transform 0.2s ease-in-out;
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .mascot-svg-wrapper:hover {
-          transform: scale(1.05);
+          transform: scale(1.08);
         }
 
         .mascot-svg-wrapper:active {
-          transform: scale(0.95);
+          transform: scale(0.92);
+        }
+
+        .mascot-svg-wrapper.jumping {
+          animation: gustav-jump 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes gustav-jump {
+          0% { transform: scale(1) translateY(0); }
+          15% { transform: scale(1.2, 0.75) translateY(6px); }
+          35% { transform: scale(0.85, 1.25) translateY(-30px) rotate(6deg); }
+          55% { transform: scale(1.05, 0.92) translateY(-30px) rotate(-6deg); }
+          75% { transform: scale(0.82, 1.15) translateY(0); }
+          90% { transform: scale(1.06, 0.95) translateY(0); }
+          100% { transform: scale(1) translateY(0); }
         }
 
         /* SVG 애니메이션 */
@@ -535,13 +577,26 @@ class StudyBuddyGustav extends HTMLElement {
 
         .heart {
           position: absolute;
-          animation: float-heart 0.8s ease-out forwards;
-          opacity: 0.9;
+          animation: float-heart 0.85s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+          opacity: 0.95;
+          pointer-events: none;
         }
 
         @keyframes float-heart {
           0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(-50px) scale(1.2) rotate(15deg); opacity: 0; }
+          100% { transform: translateY(-60px) scale(1.3) rotate(20deg); opacity: 0; }
+        }
+
+        .sparkle {
+          position: absolute;
+          animation: float-sparkle 1.1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+          opacity: 0.95;
+          pointer-events: none;
+        }
+
+        @keyframes float-sparkle {
+          0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 1; }
+          100% { transform: translate(var(--dx), var(--dy)) scale(1.4) rotate(270deg); opacity: 0; }
         }
 
         .confetti {
@@ -549,7 +604,7 @@ class StudyBuddyGustav extends HTMLElement {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          animation: scatter 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+          animation: scatter 1.1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
         }
 
         @keyframes scatter {

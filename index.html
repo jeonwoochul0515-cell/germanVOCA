@@ -20,9 +20,14 @@
 tailwind.config = {
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Outfit', 'Noto Sans KR', 'sans-serif'],
+        display: ['Fredoka', 'Noto Sans KR', 'sans-serif']
+      },
       colors: {
-        primary: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
-        surface: { light:'#f8fafc', dark:'#0f172a', card:'#ffffff', cardDark:'#1e293b' }
+        primary: { 50:'#faf6f0',100:'#f5f0e6',200:'#ebdcc5',300:'#e0c8a5',400:'#cca26a',500:'#b27d42',600:'#94602f',700:'#774921',800:'#5a3315',900:'#3d200a' },
+        brand: { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',300:'#a5b4fc',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca',800:'#3730a3',900:'#312e81' },
+        surface: { light:'#faf6f0', dark:'#1d161a', card:'#ffffff', cardDark:'#271f24' }
       }
     }
   }
@@ -30,7 +35,7 @@ tailwind.config = {
 </script>
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="bg-[#faf6f0] dark:bg-[#1d161a] min-h-screen transition-colors duration-300">
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-white focus:px-4 focus:py-2 focus:rounded focus:shadow-lg">메인 콘텐츠로 건너뛰기</a>
 
@@ -68,6 +73,7 @@ tailwind.config = {
 
 <!-- ===== 뷰: 홈 (대시보드) ===== -->
 <div id="main-content"></div>
+<div id="view-container">
 <div id="view-home" class="view-page hidden">
   <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
     <!-- 환영 카드 -->
@@ -449,6 +455,7 @@ tailwind.config = {
 
   </div>
 </div>
+</div> <!-- view-container -->
 
 <!-- ===== 축하 오버레이 ===== -->
 <div id="celebration-overlay">

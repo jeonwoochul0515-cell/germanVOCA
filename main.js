@@ -155,21 +155,75 @@ function initApp() {
     updateQuestsUI();
     updateShieldUI();
     updateTreatsUI();
+    
+    if (typeof initBackgroundSparkles === 'function') {
+        initBackgroundSparkles();
+    }
 }
 
 /* * ==========================================================================
  * 3. VIEW NAVIGATION
  * ========================================================================== */
+const viewOrder = ['home', 'learn', 'quiz', 'stats'];
 function switchView(view) {
+    if (currentView === view) {
+        if (view === 'home') updateDashboard();
+        if (view === 'stats') {
+            updateStatsPage();
+            if (typeof renderEnhancedStats === 'function') renderEnhancedStats();
+        }
+        if (view === 'learn') renderWords();
+        if (view === 'quiz') exitQuiz();
+        return;
+    }
+
+    const oldView = currentView;
     currentView = view;
-    document.querySelectorAll('.view-page').forEach(v => {
-        v.classList.remove('active');
-        v.classList.add('hidden');
-    });
-    const target = document.getElementById('view-' + view);
-    if (target) {
-        target.classList.remove('hidden');
-        target.classList.add('active');
+
+    const oldEl = document.getElementById('view-' + oldView);
+    const newEl = document.getElementById('view-' + view);
+    
+    if (!oldEl || !newEl) {
+        document.querySelectorAll('.view-page').forEach(v => {
+            v.classList.remove('active');
+            v.classList.add('hidden');
+        });
+        if (newEl) {
+            newEl.classList.remove('hidden');
+            newEl.classList.add('active');
+        }
+    } else {
+        const oldIdx = viewOrder.indexOf(oldView);
+        const newIdx = viewOrder.indexOf(view);
+        const direction = newIdx > oldIdx ? 'right' : 'left';
+
+        // pointer-events lock to prevent rapid spam clicks
+        document.body.style.pointerEvents = 'none';
+
+        // Clear existing transition tags
+        oldEl.className = oldEl.className.replace(/view-slide-\S+/g, '').trim();
+        newEl.className = newEl.className.replace(/view-slide-\S+/g, '').trim();
+
+        // Make the incoming view active
+        newEl.classList.remove('hidden');
+        newEl.classList.add('active');
+
+        // Apply slide animation classes
+        if (direction === 'right') {
+            oldEl.classList.add('view-slide-out-left');
+            newEl.classList.add('view-slide-in-right');
+        } else {
+            oldEl.classList.add('view-slide-out-right');
+            newEl.classList.add('view-slide-in-left');
+        }
+
+        setTimeout(() => {
+            oldEl.classList.remove('active');
+            oldEl.classList.add('hidden');
+            oldEl.className = oldEl.className.replace(/view-slide-\S+/g, '').trim();
+            newEl.className = newEl.className.replace(/view-slide-\S+/g, '').trim();
+            document.body.style.pointerEvents = 'auto';
+        }, 390);
     }
 
     // 탭 활성화
@@ -692,12 +746,16 @@ function attachSwipeEvents(card, item, index) {
     let longPressTimer = null, longPressRevealed = false;
 
     card.addEventListener('touchstart', e => {
-        if (e.target.closest('.speaker-btn')) return;
+        if (e.target.closest('.speaker-btn') || e.target.closest('.mnemonic-drawer') || e.target.closest('input') || e.target.closest('button')) return;
         startX = e.touches[0].clientX;
         currentX = startX;
         isDragging = true;
         longPressRevealed = false;
+        
+        // Pick-up state: lift slightly and remove transitions
         card.style.transition = 'none';
+        card.style.transform = 'scale(1.025)';
+        card.style.zIndex = '50';
 
         if (isMeaningHidden) {
             longPressTimer = setTimeout(() => {
@@ -707,7 +765,7 @@ function attachSwipeEvents(card, item, index) {
                     longPressRevealed = true;
                     if (navigator.vibrate) navigator.vibrate(30);
                 }
-            }, 2000);
+            }, 1500); // 1.5s is standard for friendly quick preview
         }
     }, {passive: true});
 
@@ -715,11 +773,16 @@ function attachSwipeEvents(card, item, index) {
         if (!isDragging) return;
         currentX = e.touches[0].clientX;
         const diffX = currentX - startX;
+        
         if (Math.abs(diffX) > 10 && longPressTimer) {
             clearTimeout(longPressTimer);
             longPressTimer = null;
         }
-        card.style.transform = `translateX(${diffX}px)`;
+        
+        // Dynamic tilt rotation physics
+        const tiltAngle = diffX * 0.07; // 0.07 deg per pixel
+        card.style.transform = `translateX(${diffX}px) rotate(${tiltAngle}deg) scale(1.025)`;
+        
         card.querySelector('.hint-left').style.opacity = diffX < 0 ? Math.min(-diffX / 100, 1) : 0;
         card.querySelector('.hint-right').style.opacity = diffX > 0 ? Math.min(diffX / 100, 1) : 0;
     }, {passive: true});
@@ -729,20 +792,42 @@ function attachSwipeEvents(card, item, index) {
         isDragging = false;
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
 
+        card.style.zIndex = '10';
+
         if (longPressRevealed) {
             const mc = card.querySelector('.meaning-container');
             if (mc) mc.classList.remove('revealed');
             longPressRevealed = false;
-            card.style.transition = 'transform 0.3s';
-            card.style.transform = 'translateX(0)';
+            card.style.transition = 'transform 0.4s var(--spring-bounce)';
+            card.style.transform = 'translateX(0) rotate(0deg) scale(1)';
             return;
         }
 
         const diffX = currentX - startX;
-        if (Math.abs(diffX) < 5) toggleCardMeaning(card);
-        else if (diffX < -100) { card.style.transform = 'translateX(-120%)'; setTimeout(() => { handleSwipeLeft(item); speakNextWord(); }, 200); }
-        else if (diffX > 100) { card.style.transform = 'translateX(120%)'; setTimeout(() => { handleSwipeRight(item); speakNextWord(); }, 200); }
-        else { card.style.transition = 'transform 0.3s'; card.style.transform = 'translateX(0)'; }
+        if (Math.abs(diffX) < 6) {
+            toggleCardMeaning(card);
+            card.style.transition = 'transform 0.4s var(--spring-bounce)';
+            card.style.transform = 'translateX(0) rotate(0deg) scale(1)';
+        }
+        else if (diffX < -100) { 
+            // Fling away left (spin out)
+            card.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s';
+            card.style.transform = `translateX(-130%) rotate(${-15}deg) scale(0.95)`; 
+            setTimeout(() => { handleSwipeLeft(item); speakNextWord(); }, 220); 
+        }
+        else if (diffX > 100) { 
+            // Fling away right (spin out)
+            card.style.transition = 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s';
+            card.style.transform = `translateX(130%) rotate(${15}deg) scale(0.95)`; 
+            setTimeout(() => { handleSwipeRight(item); speakNextWord(); }, 220); 
+        }
+        else { 
+            // Springy bounce-back to center
+            card.style.transition = 'transform 0.45s var(--spring-bounce)'; 
+            card.style.transform = 'translateX(0) rotate(0deg) scale(1)'; 
+            card.querySelector('.hint-left').style.opacity = 0;
+            card.querySelector('.hint-right').style.opacity = 0;
+        }
     });
 }
 
@@ -1066,6 +1151,7 @@ function handleQuizAnswer(btn, isCorrect, correctId) {
 
     if (isCorrect) {
         btn.classList.add('correct');
+        triggerQuizRingBlast(btn);
         quizState.correct++;
         // Enhanced SRS for correct quiz answer
         if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
@@ -1122,6 +1208,7 @@ function handleArtikelAnswer(btn, isCorrect, correctGender) {
 
     if (isCorrect) {
         btn.classList.add('correct');
+        triggerQuizRingBlast(btn);
         quizState.correct++;
         // Enhanced SRS for correct artikel answer
         if (!wordStats[qid]) wordStats[qid] = { interval: 0, nextReview: 0, attempts: 0, correct: 0, difficulty: 0.3, stability: 1, lastReview: null, tier: 'NEW' };
@@ -1161,6 +1248,20 @@ function handleArtikelAnswer(btn, isCorrect, correctGender) {
         quizState.currentIndex++;
         showQuizQuestion();
     }, isCorrect ? 700 : 1200);
+}
+
+function triggerQuizRingBlast(btn) {
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const blast = document.createElement('div');
+    blast.className = 'quiz-ring-blast';
+    blast.style.left = `${rect.left + window.scrollX + rect.width / 2}px`;
+    blast.style.top = `${rect.top + window.scrollY + rect.height / 2}px`;
+    document.body.appendChild(blast);
+    
+    setTimeout(() => {
+        blast.remove();
+    }, 550);
 }
 
 function quizPlayAudio() {
@@ -1509,7 +1610,44 @@ function calculateAverageRetention() {
     return Math.round(sum / ids.length);
 }
 
+function initBackgroundSparkles() {
+    const maxParticles = 6;
+    for (let i = 0; i < maxParticles; i++) {
+        createSparkleParticle(true);
+    }
+    
+    setInterval(() => {
+        const activeParticles = document.querySelectorAll('.bg-sparkle').length;
+        if (activeParticles < maxParticles) {
+            createSparkleParticle(false);
+        }
+    }, 2500);
+}
+
+function createSparkleParticle(randomY) {
+    const p = document.createElement('div');
+    p.className = 'bg-sparkle';
+    
+    const size = 6 + Math.random() * 12;
+    p.style.width = `${size}px`;
+    p.style.height = `${size}px`;
+    p.style.left = `${Math.random() * 100}vw`;
+    p.style.top = randomY ? `${Math.random() * 100}vh` : '105vh';
+    
+    const duration = 8 + Math.random() * 6;
+    p.style.animationDuration = `${duration}s`;
+    p.style.setProperty('--drift-x', `${(Math.random() - 0.5) * 80}px`);
+    
+    document.body.appendChild(p);
+    
+    setTimeout(() => {
+        p.remove();
+    }, duration * 1000);
+}
+
 // Bind to window to ensure global availability
+window.initBackgroundSparkles = initBackgroundSparkles;
+window.createSparkleParticle = createSparkleParticle;
 window.toggleMnemonicDrawer = toggleMnemonicDrawer;
 window.saveUserMnemonic = saveUserMnemonic;
 window.toggleMute = toggleMute;
