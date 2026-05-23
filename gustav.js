@@ -280,10 +280,85 @@ class StudyBuddyGustav extends HTMLElement {
     this.render();
     this.shadowRoot.querySelector(".mascot-svg-wrapper").addEventListener("click", () => this.handlePet());
     this.startRandomIdleSay();
+    this.startIdleAntics();
+    this.attachGazeFollow();
   }
 
   disconnectedCallback() {
     if (this.speechTimeout) clearTimeout(this.speechTimeout);
+    if (this.idleTimeout) clearTimeout(this.idleTimeout);
+    if (this._onGaze) {
+      window.removeEventListener("mousemove", this._onGaze);
+      window.removeEventListener("touchmove", this._onGaze);
+    }
+  }
+
+  // 자발적인 마이크로 행동: 살짝 점프, 꼬리 폭주, 머리 까딱
+  startIdleAntics() {
+    const loop = () => {
+      // 6~14초마다 작은 행동 하나
+      const delay = 6000 + Math.random() * 8000;
+      this.idleTimeout = setTimeout(() => {
+        const wrapper = this.shadowRoot.querySelector(".mascot-svg-wrapper");
+        if (wrapper) {
+          const pick = Math.random();
+          if (pick < 0.35) {
+            // 작은 점프 (handlePet의 큰 점프와 다른 변종)
+            wrapper.classList.remove("idle-hop");
+            void wrapper.offsetWidth;
+            wrapper.classList.add("idle-hop");
+            setTimeout(() => wrapper.classList.remove("idle-hop"), 700);
+          } else if (pick < 0.7) {
+            // 꼬리 폭주 모드 잠시
+            const tail = this.shadowRoot.querySelector(".tail");
+            if (tail) {
+              tail.style.animation = "wag-fast 0.35s 4 ease-in-out";
+              setTimeout(() => { tail.style.animation = ""; }, 1600);
+            }
+          } else {
+            // 살짝 좌우 까딱 (머리 갸웃)
+            wrapper.classList.remove("head-tilt");
+            void wrapper.offsetWidth;
+            wrapper.classList.add("head-tilt");
+            setTimeout(() => wrapper.classList.remove("head-tilt"), 900);
+          }
+        }
+        loop();
+      }, delay);
+    };
+    loop();
+  }
+
+  // 마우스/터치 위치에 따라 동공이 따라가는 시선 추적
+  attachGazeFollow() {
+    const pupils = this.shadowRoot.querySelectorAll(".pupil");
+    if (!pupils.length) return;
+    // 무한 eye-look keyframe을 멈추고 inline transform으로 제어 (충돌 방지)
+    pupils.forEach(p => { p.style.animation = "none"; });
+    this._onGaze = (e) => {
+      const point = e.touches ? e.touches[0] : e;
+      if (!point) return;
+      const wrapper = this.shadowRoot.querySelector(".mascot-svg-wrapper");
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = point.clientX - cx;
+      const dy = point.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 1) return;
+      // 최대 2.2px 이동 (눈 크기 대비 자연스러운 범위)
+      const maxShift = 2.2;
+      const shift = Math.min(maxShift, dist / 80);
+      const angle = Math.atan2(dy, dx);
+      const tx = Math.cos(angle) * shift;
+      const ty = Math.sin(angle) * shift;
+      pupils.forEach(p => {
+        p.style.transform = `translate(${tx}px, ${ty}px)`;
+      });
+    };
+    window.addEventListener("mousemove", this._onGaze, { passive: true });
+    window.addEventListener("touchmove", this._onGaze, { passive: true });
   }
 
   handlePet() {
@@ -457,6 +532,27 @@ class StudyBuddyGustav extends HTMLElement {
           animation: gustav-jump 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
+        .mascot-svg-wrapper.idle-hop {
+          animation: gustav-idle-hop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes gustav-idle-hop {
+          0% { transform: scale(1) translateY(0); }
+          30% { transform: scale(1.08, 0.94) translateY(-10px); }
+          55% { transform: scale(0.96, 1.06) translateY(0); }
+          75% { transform: scale(1.02, 0.98) translateY(-3px); }
+          100% { transform: scale(1) translateY(0); }
+        }
+
+        .mascot-svg-wrapper.head-tilt {
+          animation: gustav-head-tilt 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes gustav-head-tilt {
+          0% { transform: rotate(0deg); }
+          30% { transform: rotate(-9deg); }
+          60% { transform: rotate(7deg); }
+          100% { transform: rotate(0deg); }
+        }
+
         @keyframes gustav-jump {
           0% { transform: scale(1) translateY(0); }
           15% { transform: scale(1.2, 0.75) translateY(6px); }
@@ -479,6 +575,7 @@ class StudyBuddyGustav extends HTMLElement {
         .pupil {
           transform-origin: center;
           animation: eye-look 8s infinite ease-in-out;
+          transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .tail {
           transform-origin: 30px 85px;

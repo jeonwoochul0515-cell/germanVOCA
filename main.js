@@ -17,7 +17,7 @@ let activeFilter = null;
 let wordStats = {};
 let dailyHistory = {};
 const TARGET_DAILY_COUNT = 100;
-let currentView = 'home';
+let currentView = null;
 let userXP = parseInt(localStorage.getItem('germanVocab_userXP') || '0');
 let userLevel = Math.floor(Math.sqrt(userXP / 50)) + 1;
 
@@ -191,6 +191,7 @@ function switchView(view) {
         if (newEl) {
             newEl.classList.remove('hidden');
             newEl.classList.add('active');
+            retriggerStagger(newEl);
         }
     } else {
         const oldIdx = viewOrder.indexOf(oldView);
@@ -207,6 +208,7 @@ function switchView(view) {
         // Make the incoming view active
         newEl.classList.remove('hidden');
         newEl.classList.add('active');
+        retriggerStagger(newEl);
 
         // Apply slide animation classes
         if (direction === 'right') {
@@ -230,6 +232,7 @@ function switchView(view) {
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.view === view);
     });
+    updateNavIndicator();
 
     // 뷰별 갱신
     if (view === 'home') updateDashboard();
@@ -241,6 +244,54 @@ function switchView(view) {
     if (view === 'quiz') exitQuiz();
 }
 
+// 뷰 진입 시 stagger-in 자식들을 reflow로 다시 트리거
+function retriggerStagger(viewEl) {
+    if (!viewEl) return;
+    viewEl.querySelectorAll('.stagger-in').forEach(container => {
+        container.classList.remove('stagger-in');
+        void container.offsetWidth;
+        container.classList.add('stagger-in');
+    });
+}
+
+// 하단 nav active 탭 위치로 인디케이터 슬라이드
+function updateNavIndicator() {
+    const indicator = document.getElementById('nav-indicator');
+    if (!indicator) return;
+    const activeTab = document.querySelector('.nav-tab.active');
+    if (!activeTab) return;
+    const bar = activeTab.closest('.nav-bar');
+    if (!bar) return;
+    const tabRect = activeTab.getBoundingClientRect();
+    const barRect = bar.getBoundingClientRect();
+    const width = Math.max(24, tabRect.width * 0.5);
+    const left = tabRect.left - barRect.left + (tabRect.width - width) / 2;
+    indicator.style.left = `${left}px`;
+    indicator.style.width = `${width}px`;
+    indicator.classList.add('ready');
+}
+
+// 탭 ripple 마이크로 인터랙션 - 모든 nav-tab에 위임
+document.addEventListener('click', (e) => {
+    const tab = e.target.closest('.nav-tab');
+    if (!tab) return;
+    const rect = tab.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'nav-ripple';
+    const size = Math.max(rect.width, rect.height) * 1.4;
+    ripple.style.width = `${size}px`;
+    ripple.style.height = `${size}px`;
+    ripple.style.left = `${e.clientX - rect.left}px`;
+    ripple.style.top = `${e.clientY - rect.top}px`;
+    tab.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+});
+
+// 창 크기 변경 시 인디케이터 재정렬
+window.addEventListener('resize', () => {
+    if (typeof updateNavIndicator === 'function') updateNavIndicator();
+});
+
 /* * ==========================================================================
  * 4. DASHBOARD (HOME VIEW)
  * ========================================================================== */
@@ -250,17 +301,17 @@ function updateDashboard() {
     const masteredCount = Object.values(wordStats).filter(s => s.interval >= 4).length;
     const mastery = totalWords ? Math.round((learnedCount / totalWords) * 100) : 0;
 
-    setText('stat-total-words', totalWords);
-    setText('stat-learned', learnedCount);
-    setText('stat-mastery', mastery + '%');
-    setText('remaining-count', currentVocabList.length);
+    setText('stat-total-words', totalWords, true);
+    setText('stat-learned', learnedCount, true);
+    setText('stat-mastery', mastery + '%', true);
+    setText('remaining-count', currentVocabList.length, true);
 
     // 진행률
     const done = TARGET_DAILY_COUNT - currentVocabList.length;
     const pct = Math.round((done / TARGET_DAILY_COUNT) * 100);
-    setText('progress-done', Math.max(0, done));
+    setText('progress-done', Math.max(0, done), true);
     setText('progress-total', TARGET_DAILY_COUNT);
-    setText('progress-percent', Math.max(0, pct) + '%');
+    setText('progress-percent', Math.max(0, pct) + '%', true);
     const bar = document.getElementById('progress-bar');
     if (bar) bar.style.width = Math.max(0, pct) + '%';
 
@@ -269,9 +320,9 @@ function updateDashboard() {
     currentVocabList.forEach(w => counts[w.partOfSpeech]++);
     const total = currentVocabList.length || 1;
 
-    setText('home-count-noun', counts.Noun);
-    setText('home-count-verb', counts.Verb);
-    setText('home-count-adj', counts.Adjective);
+    setText('home-count-noun', counts.Noun, true);
+    setText('home-count-verb', counts.Verb, true);
+    setText('home-count-adj', counts.Adjective, true);
 
     setWidth('bar-noun', (counts.Noun / total * 100) + '%');
     setWidth('bar-verb', (counts.Verb / total * 100) + '%');
@@ -302,9 +353,45 @@ function updateDashboard() {
     updateShieldUI();
 }
 
-function setText(id, val) {
+function setText(id, val, animate = false) {
     const el = document.getElementById(id);
-    if (el) el.textContent = val;
+    if (!el) return;
+    if (!animate) {
+        el.textContent = val;
+        return;
+    }
+    // 카운트업: "42" 또는 "42%" 같은 형식에서 숫자 부분만 보간
+    const m = String(val).match(/^(-?\d+(?:\.\d+)?)(.*)$/);
+    if (!m) {
+        el.textContent = val;
+        return;
+    }
+    const target = parseFloat(m[1]);
+    const suffix = m[2] || '';
+    const startText = (el.textContent || '0').match(/^(-?\d+(?:\.\d+)?)/);
+    const start = startText ? parseFloat(startText[1]) : 0;
+    if (start === target) {
+        el.textContent = `${Math.round(target)}${suffix}`;
+        return;
+    }
+    const duration = 700;
+    const startTime = performance.now();
+    const isInteger = Number.isInteger(target);
+    const step = (now) => {
+        const t = Math.min(1, (now - startTime) / duration);
+        // ease-out cubic
+        const eased = 1 - Math.pow(1 - t, 3);
+        const cur = start + (target - start) * eased;
+        el.textContent = `${isInteger ? Math.round(cur) : cur.toFixed(1)}${suffix}`;
+        if (t < 1) requestAnimationFrame(step);
+        else {
+            el.textContent = `${isInteger ? Math.round(target) : target.toFixed(1)}${suffix}`;
+            el.classList.remove('number-pulse');
+            void el.offsetWidth;
+            el.classList.add('number-pulse');
+        }
+    };
+    requestAnimationFrame(step);
 }
 
 function setWidth(id, w) {
@@ -320,13 +407,14 @@ function updateStatsPage() {
     const learnedCount = Object.keys(wordStats).length;
     const masteredCount = Object.values(wordStats).filter(s => s.interval >= 4).length;
 
-    setText('stats-total-vocab', totalWords);
-    setText('stats-learned-count', learnedCount);
-    setText('stats-mastered', masteredCount);
+    setText('stats-total-vocab', totalWords, true);
+    setText('stats-learned-count', learnedCount, true);
+    setText('stats-mastered', masteredCount, true);
 
     // 연속 학습일 계산
     const streak = calculateStreak();
-    setText('stats-streak', streak);
+    setText('stats-streak', streak, true);
+    setText('streak-count', streak, true);
 
     // 레벨별 진행도
     renderLevelProgress();
@@ -637,7 +725,10 @@ function renderWords() {
 function createCard(item, index) {
     const card = document.createElement('div');
     const glowClasses = { Noun: "glow-noun", Verb: "glow-verb", Adjective: "glow-adjective" };
-    card.className = `bg-white p-4 rounded-2xl shadow-sm border border-slate-100 card-touch flex flex-col relative overflow-hidden select-none mb-2 ${glowClasses[item.partOfSpeech] || ''}`;
+    card.className = `bg-white p-4 rounded-2xl shadow-sm border border-slate-100 card-touch card-stagger flex flex-col relative overflow-hidden select-none mb-2 ${glowClasses[item.partOfSpeech] || ''}`;
+    // 위 10장까지는 진짜 stagger, 11번째부터는 같은 짧은 지연으로 정리
+    const delay = Math.min(index, 12) * 0.04;
+    card.style.setProperty('--card-delay', `${delay}s`);
 
     const borderColors = { Noun: "border-l-blue-500", Verb: "border-l-red-500", Adjective: "border-l-green-500" };
     const textColors = { Noun: "text-blue-600", Verb: "text-red-600", Adjective: "text-green-600" };

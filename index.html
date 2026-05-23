@@ -75,7 +75,7 @@ tailwind.config = {
 <div id="main-content"></div>
 <div id="view-container">
 <div id="view-home" class="view-page hidden">
-  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5 stagger-in">
     <!-- 환영 카드 -->
     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
       <h2 class="text-xl font-bold">Willkommen!</h2>
@@ -121,7 +121,7 @@ tailwind.config = {
       </div>
       <!-- 진행률 바 -->
       <div class="w-full bg-slate-100 rounded-full h-2.5 mb-3">
-        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-500" id="progress-bar" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        <div class="progress-fill bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full" id="progress-bar" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
       </div>
       <div class="flex justify-between text-xs text-slate-500 mb-4">
         <span><span id="progress-done">0</span> / <span id="progress-total">100</span> 완료</span>
@@ -176,21 +176,21 @@ tailwind.config = {
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-blue-600">명사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-blue-500 h-3 rounded-full transition-all" id="bar-noun" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-fill bg-blue-500 h-3 rounded-full" id="bar-noun" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-noun">0</span>
         </div>
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-red-600">동사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-red-500 h-3 rounded-full transition-all" id="bar-verb" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-fill bg-red-500 h-3 rounded-full" id="bar-verb" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-verb">0</span>
         </div>
         <div class="flex items-center gap-3">
           <span class="w-16 text-xs font-semibold text-green-600">형용사</span>
           <div class="flex-1 bg-slate-100 rounded-full h-3">
-            <div class="bg-green-500 h-3 rounded-full transition-all" id="bar-adjective" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-fill bg-green-500 h-3 rounded-full" id="bar-adjective" style="width:0%" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
           <span class="text-xs text-slate-500 w-8 text-right" id="home-count-adj">0</span>
         </div>
@@ -207,7 +207,7 @@ tailwind.config = {
 
 <!-- ===== 뷰: 학습 ===== -->
 <div id="view-learn" class="view-page hidden">
-  <div class="max-w-2xl mx-auto px-4 py-3">
+  <div class="max-w-2xl mx-auto px-4 py-3 stagger-in">
     <!-- 학습 컨트롤 -->
     <div class="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-1">
       <button onclick="toggleMeanings()" id="toggleBtn" class="flex-shrink-0 bg-indigo-600 active:bg-indigo-700 text-white py-2 px-3.5 rounded-xl text-xs font-bold shadow-sm transition whitespace-nowrap" aria-label="뜻 가리기 토글">
@@ -253,7 +253,7 @@ tailwind.config = {
 
 <!-- ===== 뷰: 통계 ===== -->
 <div id="view-stats" class="view-page hidden">
-  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5 stagger-in">
     <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl p-4 mb-4" id="streak-display">
       <div class="flex items-center justify-between">
         <div>
@@ -318,7 +318,7 @@ tailwind.config = {
 
 <!-- ===== 뷰: 퀴즈 ===== -->
 <div id="view-quiz" class="view-page hidden">
-  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5">
+  <div class="max-w-2xl mx-auto px-4 py-6 space-y-5 stagger-in">
 
     <!-- 퀴즈 모드 선택 (퀴즈 시작 전) -->
     <div id="quiz-setup">
@@ -472,23 +472,24 @@ tailwind.config = {
 
 <!-- ===== 하단 네비게이션 바 ===== -->
 <nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-slate-200 safe-bottom" id="bottom-nav" role="navigation" aria-label="메인 내비게이션">
-  <div class="max-w-2xl mx-auto flex justify-around items-center h-16">
+  <div class="nav-bar max-w-2xl mx-auto flex justify-around items-center h-16">
     <button onclick="switchView('home')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="home" aria-label="홈">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
+      <svg class="nav-icon w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/></svg>
       <span class="text-xs font-semibold">홈</span>
     </button>
     <button onclick="switchView('learn')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="learn" aria-label="학습">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <svg class="nav-icon w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
       <span class="text-xs font-semibold">학습</span>
     </button>
     <button onclick="switchView('quiz')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="quiz" aria-label="퀴즈">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <svg class="nav-icon w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       <span class="text-xs font-semibold">퀴즈</span>
     </button>
     <button onclick="switchView('stats')" class="nav-tab flex flex-col items-center gap-1 px-4 py-1 min-h-[48px]" data-view="stats" aria-label="통계">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <svg class="nav-icon w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       <span class="text-xs font-semibold">통계</span>
     </button>
+    <div class="nav-indicator" id="nav-indicator"></div>
   </div>
 </nav>
 
