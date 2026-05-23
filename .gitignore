@@ -7,3 +7,7 @@ Thumbs.db
 dist/
 .env
 .env.local
+
+# 일회성 첨부/디버그 스크린샷
+image.png
+snap-*.png
