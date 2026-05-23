@@ -642,8 +642,7 @@ body.dark-mode .bg-sparkle {
     100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 .stagger-in > * {
-    opacity: 0;
-    animation: dropBounceIn 0.55s var(--spring-bounce) backwards;
+    animation: dropBounceIn 0.55s var(--spring-bounce) both;
 }
 .stagger-in > *:nth-child(1)  { animation-delay: 0.04s; }
 .stagger-in > *:nth-child(2)  { animation-delay: 0.10s; }
@@ -659,8 +658,7 @@ body.dark-mode .bg-sparkle {
 
 /* 카드 컨테이너용: 인라인 --card-delay 사용 (학습 페이지) */
 .card-stagger {
-    opacity: 0;
-    animation: dropBounceIn 0.5s var(--spring-bounce) backwards;
+    animation: dropBounceIn 0.5s var(--spring-bounce) both;
     animation-delay: var(--card-delay, 0s);
 }
 
